@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta name="theme-color" content="#0d0d1a">
+<title>Unlocking — Last Call</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0d0d1a;color:#f0f0f0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+.card{background:#161628;border:1px solid #2a2a44;border-radius:20px;padding:36px 28px;max-width:420px;width:100%;text-align:center}
+.logo{font-size:2rem;font-weight:900;color:#e94560;margin-bottom:16px}
+.logo span{color:#f0f0f0}
+h2{font-size:1.2rem;font-weight:700;margin-bottom:12px}
+p{color:#9090b0;font-size:.9rem;line-height:1.6;margin-bottom:20px}
+.status{font-size:1.8rem;margin-bottom:12px}
+.btn{display:block;width:100%;padding:16px;border:none;border-radius:12px;font-size:1rem;font-weight:700;cursor:pointer;background:#e94560;color:#fff;margin-top:12px;text-decoration:none;text-align:center}
+.btn-secondary{background:#2a2a44}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">LAST<span>CALL</span></div>
+  <div class="status" id="status-icon">&#x23F3;</div>
+  <h2 id="status-title">Confirming your purchase&hellip;</h2>
+  <p id="status-msg">Hang tight while we verify your payment.</p>
+  <div id="actions"></div>
+</div>
+<script>
+(function(){
+  var TILL_BASE='https://till.defimagic.io';
+  var PRODUCTS=[
+    {product:'lastcall_pack1',key:'till_lastcall_pack1'},
+    {product:'lastcall_pack2',key:'till_lastcall_pack2'},
+    {product:'lastcall_all', key:'till_lastcall_all'}
+  ];
+  var params=new URLSearchParams(location.search);
+  var sessionId=params.get('session_id');
+
+  function showRetry(){
+    document.getElementById('status-icon').textContent='⚠️';
+    document.getElementById('status-title').textContent='Confirming your purchase';
+    document.getElementById('status-msg').textContent='We’re having trouble reaching our server. Your purchase is saved — tap Retry to check again, or email us and we’ll sort it out.';
+    var a=document.getElementById('actions');
+    a.innerHTML='<button class="btn" onclick="location.reload()">Retry</button><a href="mailto:support@defimagic.io" class="btn btn-secondary" style="margin-top:8px">Email us</a>';
+  }
+
+  function showError(){
+    document.getElementById('status-icon').textContent='❌';
+    document.getElementById('status-title').textContent='Purchase not found';
+    document.getElementById('status-msg').textContent='We couldn’t match this session to a purchase. If you completed payment, email us and we’ll unlock your pack manually.';
+    var a=document.getElementById('actions');
+    a.innerHTML='<a href="mailto:support@defimagic.io" class="btn">Email support</a><a href="/" class="btn btn-secondary" style="margin-top:8px">Back to game</a>';
+  }
+
+  async function attemptVerify(){
+    if(!sessionId){showError();return;}
+    try{
+      for(var i=0;i<PRODUCTS.length;i++){
+        var p=PRODUCTS[i];
+        var r=await fetch(TILL_BASE+'/verify?session_id='+encodeURIComponent(sessionId)+'&product='+p.product);
+        if(r.status>=500){showRetry();return;}
+        if(r.ok){
+          var d=await r.json();
+          if(d.ok&&d.token){
+            localStorage.setItem(p.key,d.token);
+            window.location.href='/';
+            return;
+          }
+        }
+      }
+      showError();
+    }catch(e){
+      showRetry();
+    }
+  }
+
+  attemptVerify();
+})();
+</script>
+</body>
+</html>

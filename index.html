@@ -202,7 +202,6 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sa
           </label>
         </div>
         <button class="unlock-btn" id="unlock-messy-btn" onclick="showUnlock('messy')">&#x1F513; Unlock Messy Night — £2.99</button>
-        <button class="unlock-btn" id="enter-key-messy-btn" onclick="showKeyEntry('messy')" style="font-size:.75rem;padding:8px">Already bought? Enter your key</button>
 
         <!-- Couples Pregame -->
         <div class="pack-card" id="pack-couples-card" style="margin-top:4px">
@@ -216,7 +215,9 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sa
           </label>
         </div>
         <button class="unlock-btn" id="unlock-couples-btn" onclick="showUnlock('couples')">&#x1F513; Unlock Couples Pregame — £2.99</button>
-        <button class="unlock-btn" id="enter-key-couples-btn" onclick="showKeyEntry('couples')" style="font-size:.75rem;padding:8px">Already bought? Enter your key</button>
+
+        <!-- Bundle -->
+        <button class="unlock-btn" id="unlock-all-btn" onclick="showUnlock('all')" style="margin-top:12px;background:#1a1a38;border-color:#5a4090;color:#c0a0ff">&#x1F389; Get Both Packs — £4.99</button>
       </div>
     </div>
 
@@ -302,23 +303,12 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sa
       </div>
       <span class="pack-status locked" id="settings-messy-status">Locked</span>
     </div>
-    <div id="settings-messy-key-section">
-      <input type="text" class="key-input" id="key-input-messy-s" placeholder="LC1.payload.signature" autocomplete="off" autocorrect="off" spellcheck="false">
-      <div class="key-msg" id="key-msg-messy-s"></div>
-      <button class="btn btn-secondary" style="margin-top:10px" onclick="applyKey('messy','s')">Apply Key</button>
-    </div>
-
     <div class="setting-row" style="margin-top:16px">
       <div>
         <div class="setting-label">Couples Pregame Pack</div>
         <div class="setting-sub">200 flirty &amp; romantic prompts</div>
       </div>
       <span class="pack-status locked" id="settings-couples-status">Locked</span>
-    </div>
-    <div id="settings-couples-key-section">
-      <input type="text" class="key-input" id="key-input-couples-s" placeholder="LC1.payload.signature" autocomplete="off" autocorrect="off" spellcheck="false">
-      <div class="key-msg" id="key-msg-couples-s"></div>
-      <button class="btn btn-secondary" style="margin-top:10px" onclick="applyKey('couples','s')">Apply Key</button>
     </div>
 
     <div class="setting-row" style="margin-top:16px">
@@ -338,26 +328,8 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sa
       <h2 id="unlock-title">Unlock Messy Night</h2>
       <p id="unlock-desc">200 bolder prompts — all still within the fun, crude-humour tier. One-time unlock, stored on this device.</p>
       <span class="price-tag" id="unlock-price">£2.99</span>
-      <div class="integration-note" id="unlock-pending-note" style="display:none">
-        ⚠ INTEGRATION-PENDING: Stripe payment link not yet wired. Check back after the till worker runs.
-      </div>
       <button class="btn btn-primary" id="unlock-pay-btn" onclick="goToPay()">Pay &amp; Unlock</button>
-      <button class="btn btn-secondary" style="margin-top:10px" onclick="showKeyEntry(currentUnlockPack)">Already bought? Enter your key</button>
       <button class="btn btn-outline" style="margin-top:8px" onclick="hideUnlock()">Cancel</button>
-    </div>
-  </div>
-</div>
-
-<!-- ──────────────── KEY ENTRY OVERLAY ──────────────── -->
-<div id="ov-key" class="overlay hidden" onclick="hideKeyOverlay(event)">
-  <div style="display:flex;align-items:center;justify-content:center;flex:1;padding:24px;width:100%">
-    <div class="unlock-modal" onclick="event.stopPropagation()">
-      <h2>Enter License Key</h2>
-      <p>Paste the key from your purchase email here.</p>
-      <input type="text" class="key-input" id="key-input-main" placeholder="LC1.payload.signature" autocomplete="off" autocorrect="off" spellcheck="false">
-      <div class="key-msg" id="key-msg-main"></div>
-      <button class="btn btn-primary" style="margin-top:12px" onclick="applyKey(currentUnlockPack,'main')">Unlock</button>
-      <button class="btn btn-outline" style="margin-top:8px" onclick="hideKeyOverlay()">Cancel</button>
     </div>
   </div>
 </div>
@@ -390,16 +362,15 @@ const DECK_COUPLES=[{"id":"c001","t":"truth","s":"What was the first thing you t
 // ────────────────────────────────────────────
 // CONSTANTS
 // ────────────────────────────────────────────
-const PUB_KEY_B64='MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEM9DrKlwZuwLAD/cp7UI4KtVy3YpmGHiAqFkAEW2RJuuyz0kMpvmyHhX+iVRnHzN1HoDGdw6LKePfwPGH4I2KOA==';
+const TILL_BASE='https://till.defimagic.io';
 const LS={
-  age:'lc_age',zerop:'lc_zerop',
-  packMessy:'lc_pack_messy',packCouples:'lc_pack_couples',
-  players:'lc_players'
+  age:'lc_age',zerop:'lc_zerop',players:'lc_players',
+  pack1:'till_lastcall_pack1',pack2:'till_lastcall_pack2',packAll:'till_lastcall_all'
 };
-// INTEGRATION-PENDING: replace with real Stripe payment link URLs after till worker runs
 const STRIPE_LINKS={
-  messy:'INTEGRATION-PENDING',
-  couples:'INTEGRATION-PENDING'
+  messy:'https://buy.stripe.com/6oUdR92cDgUW1tQd9J2gp0g',
+  couples:'https://buy.stripe.com/9B6cN59F5eMOb4q6Ll2gp0h',
+  all:'https://buy.stripe.com/cNi5kD7wX48a2xU6Ll2gp0i'
 };
 
 // ────────────────────────────────────────────
@@ -411,17 +382,11 @@ let deckIdx=0;
 let zeropMode=false;
 let touchStartX=0;
 let currentUnlockPack='messy';
-let cachedPubKey=null;
 
 // ────────────────────────────────────────────
 // INIT
 // ────────────────────────────────────────────
 (function init(){
-  // Check URL params for key (Stripe redirect)
-  const params=new URLSearchParams(location.search);
-  const urlKey=params.get('key');
-  if(urlKey) handleUrlKey(urlKey);
-
   // Restore state
   zeropMode=localStorage.getItem(LS.zerop)==='1';
   try{players=JSON.parse(localStorage.getItem(LS.players)||'[]')}catch(e){players=[]}
@@ -433,6 +398,9 @@ let cachedPubKey=null;
   } else {
     show('s-age');
   }
+
+  // Background TILL check — revoke only if confirmed invalid, optimistic otherwise
+  setTimeout(tillCheckAll,300);
 })();
 
 // ────────────────────────────────────────────
@@ -512,7 +480,6 @@ function renderPackStatus(){
   document.getElementById('messy-badge').className='pack-badge'+(messyUnlocked?'':' locked-badge');
   document.getElementById('messy-toggle-wrap').style.display=messyUnlocked?'block':'none';
   document.getElementById('unlock-messy-btn').style.display=messyUnlocked?'none':'block';
-  document.getElementById('enter-key-messy-btn').style.display=messyUnlocked?'none':'block';
   document.getElementById('pack-messy-card').className='pack-card'+(messyUnlocked?' selected':'');
   if(messyUnlocked) document.getElementById('toggle-messy').checked=true;
 
@@ -521,17 +488,18 @@ function renderPackStatus(){
   document.getElementById('couples-badge').className='pack-badge'+(couplesUnlocked?'':' locked-badge');
   document.getElementById('couples-toggle-wrap').style.display=couplesUnlocked?'block':'none';
   document.getElementById('unlock-couples-btn').style.display=couplesUnlocked?'none':'block';
-  document.getElementById('enter-key-couples-btn').style.display=couplesUnlocked?'none':'block';
   document.getElementById('pack-couples-card').className='pack-card'+(couplesUnlocked?' selected':'');
   if(couplesUnlocked) document.getElementById('toggle-couples').checked=true;
+
+  // Bundle button — hide when both unlocked
+  const allBtn=document.getElementById('unlock-all-btn');
+  if(allBtn) allBtn.style.display=(messyUnlocked&&couplesUnlocked)?'none':'block';
 
   // Settings
   const sm=document.getElementById('settings-messy-status');
   if(sm){sm.textContent=messyUnlocked?'Unlocked':'Locked';sm.className='pack-status'+(messyUnlocked?'':' locked')}
   const sc=document.getElementById('settings-couples-status');
   if(sc){sc.textContent=couplesUnlocked?'Unlocked':'Locked';sc.className='pack-status'+(couplesUnlocked?'':' locked')}
-  document.getElementById('settings-messy-key-section').style.display=messyUnlocked?'none':'block';
-  document.getElementById('settings-couples-key-section').style.display=couplesUnlocked?'none':'block';
 }
 function deckToggleChanged(){
   buildDeck();
@@ -557,11 +525,9 @@ function shuffle(arr){
   return a;
 }
 function isPackUnlocked(pack){
-  const key=pack==='messy'?LS.packMessy:LS.packCouples;
-  const stored=localStorage.getItem(key);
-  if(!stored) return false;
-  // Value stored is the license key string — trust if present (verified at set time)
-  return true;
+  if(localStorage.getItem(LS.packAll)) return true;
+  const key=pack==='messy'?LS.pack1:LS.pack2;
+  return !!localStorage.getItem(key);
 }
 
 // ────────────────────────────────────────────
@@ -675,69 +641,21 @@ function updateZeropIndicator(){
 }
 
 // ────────────────────────────────────────────
-// LICENSE KEY / ECDSA
+// TILL CHECK (background, optimistic unlock)
 // ────────────────────────────────────────────
-function b64ToBytes(b64){
-  const s=atob(b64.replace(/-/g,'+').replace(/_/g,'/'));
-  return Uint8Array.from(s,c=>c.charCodeAt(0));
-}
-async function getPubKey(){
-  if(cachedPubKey) return cachedPubKey;
-  cachedPubKey=await crypto.subtle.importKey(
-    'spki',b64ToBytes(PUB_KEY_B64),
-    {name:'ECDSA',namedCurve:'P-256'},false,['verify']
-  );
-  return cachedPubKey;
-}
-async function verifyLicenseKey(key,expectedPack){
+async function tillCheck(product,lsKey){
+  const token=localStorage.getItem(lsKey);
+  if(!token) return;
   try{
-    const parts=(key||'').trim().split('.');
-    if(parts.length!==3||parts[0]!=='LC1') return{ok:false,msg:'Key format invalid (should start with LC1.)'};
-    const payloadBytes=b64ToBytes(parts[1]);
-    const sig=b64ToBytes(parts[2]);
-    const pub=await getPubKey();
-    const valid=await crypto.subtle.verify({name:'ECDSA',hash:'SHA-256'},pub,sig,payloadBytes);
-    if(!valid) return{ok:false,msg:'Signature invalid — check the key was copied completely.'};
-    const payload=JSON.parse(new TextDecoder().decode(payloadBytes));
-    const packId=expectedPack==='messy'?'lastcall-messy':'lastcall-couples';
-    if(payload.p!==packId) return{ok:false,msg:`This key is for a different pack (got: ${payload.p})`};
-    return{ok:true};
-  }catch(e){
-    return{ok:false,msg:'Could not read key — check it was copied completely.'};
-  }
+    const r=await fetch(TILL_BASE+'/check?token='+encodeURIComponent(token)+'&product='+product);
+    if(r.ok){const d=await r.json();if(!d.ok){localStorage.removeItem(lsKey);renderPackStatus();}}
+    // non-2xx or network error → stay unlocked (optimistic)
+  }catch(e){}
 }
-async function applyKey(pack,suffix){
-  const inputId=`key-input-${pack}-${suffix}`;
-  const msgId=`key-msg-${pack}-${suffix}`;
-  const key=(document.getElementById(inputId)||{}).value||'';
-  const msg=document.getElementById(msgId);
-  if(!key.trim()){if(msg){msg.textContent='Paste your license key above.';msg.className='key-msg err'}return;}
-  const result=await verifyLicenseKey(key.trim(),pack);
-  if(result.ok){
-    const lsKey=pack==='messy'?LS.packMessy:LS.packCouples;
-    localStorage.setItem(lsKey,key.trim());
-    if(msg){msg.textContent='✓ Unlocked! Pack is now active.';msg.className='key-msg ok'}
-    renderPackStatus();
-    hideKeyOverlay();
-    hideSettings();
-  } else {
-    if(msg){msg.textContent=result.msg;msg.className='key-msg err'}
-  }
-}
-async function handleUrlKey(key){
-  // Try both packs
-  for(const pack of['messy','couples']){
-    const result=await verifyLicenseKey(key,pack);
-    if(result.ok){
-      const lsKey=pack==='messy'?LS.packMessy:LS.packCouples;
-      localStorage.setItem(lsKey,key);
-      break;
-    }
-  }
-  // Clear key from URL
-  const url=new URL(location.href);
-  url.searchParams.delete('key');
-  history.replaceState({},'',url.toString());
+function tillCheckAll(){
+  tillCheck('lastcall_pack1',LS.pack1);
+  tillCheck('lastcall_pack2',LS.pack2);
+  tillCheck('lastcall_all',LS.packAll);
 }
 
 // ────────────────────────────────────────────
@@ -745,14 +663,15 @@ async function handleUrlKey(key){
 // ────────────────────────────────────────────
 function showUnlock(pack){
   currentUnlockPack=pack;
+  const isAll=pack==='all';
   const isMessy=pack==='messy';
-  document.getElementById('unlock-title').textContent=isMessy?'Unlock Messy Night':'Unlock Couples Pregame';
-  document.getElementById('unlock-desc').textContent=isMessy
+  document.getElementById('unlock-title').textContent=isAll?'Get Both Packs':isMessy?'Unlock Messy Night':'Unlock Couples Pregame';
+  document.getElementById('unlock-desc').textContent=isAll
+    ?'Unlock both Messy Night and Couples Pregame together. Best value.'
+    :isMessy
     ?'200 bolder crude-humour prompts. One-time unlock, works offline, stored on this device.'
     :'200 flirty & romantic prompts. Best played when everyone is in a couple. One-time unlock.';
-  document.getElementById('unlock-price').textContent='£2.99';
-  const isPending=STRIPE_LINKS[pack]==='INTEGRATION-PENDING';
-  document.getElementById('unlock-pending-note').style.display=isPending?'block':'none';
+  document.getElementById('unlock-price').textContent=isAll?'£4.99':'£2.99';
   document.getElementById('ov-unlock').classList.remove('hidden');
 }
 function hideUnlock(e){
@@ -760,24 +679,7 @@ function hideUnlock(e){
   document.getElementById('ov-unlock').classList.add('hidden');
 }
 function goToPay(){
-  const link=STRIPE_LINKS[currentUnlockPack];
-  if(link==='INTEGRATION-PENDING'){
-    alert('Payment not yet available — Stripe payment links are being set up. Check back soon!');
-    return;
-  }
-  window.open(link,'_blank');
-}
-function showKeyEntry(pack){
-  currentUnlockPack=pack;
-  document.getElementById('key-input-main').value='';
-  document.getElementById('key-msg-main').className='key-msg';
-  document.getElementById('key-msg-main').textContent='';
-  document.getElementById('ov-unlock').classList.add('hidden');
-  document.getElementById('ov-key').classList.remove('hidden');
-}
-function hideKeyOverlay(e){
-  if(e&&e.target!==document.getElementById('ov-key')) return;
-  document.getElementById('ov-key').classList.add('hidden');
+  window.location.href=STRIPE_LINKS[currentUnlockPack];
 }
 
 // ────────────────────────────────────────────
