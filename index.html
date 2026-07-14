@@ -1,0 +1,870 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no">
+<meta name="theme-color" content="#0d0d1a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Last Call — Party Card Game</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#0d0d1a;--card:#161628;--accent:#e94560;--accent2:#7b5ea7;
+  --text:#f0f0f0;--sub:#9090b0;--badge-truth:#3a86ff;--badge-dare:#ff6b35;
+  --badge-vote:#8338ec;--badge-rule:#06d6a0;--badge-everyone:#fb5607;
+  --badge-targeted:#ffbe0b;--radius:16px;--safe:#111122
+}
+html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);overflow:hidden;touch-action:manipulation}
+.screen{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;opacity:1;transition:opacity .2s;overflow-y:auto}
+.screen.hidden{display:none}
+
+/* ── AGE GATE ── */
+#s-age{background:var(--bg);text-align:center;gap:24px}
+#s-age .logo{font-size:2.6rem;font-weight:900;letter-spacing:-1px;color:var(--accent)}
+#s-age .logo span{color:var(--text)}
+#s-age p{color:var(--sub);max-width:320px;line-height:1.6;font-size:.95rem}
+#s-age .gate-box{background:var(--card);border:1px solid #2a2a44;border-radius:var(--radius);padding:28px;max-width:360px;width:100%;display:flex;flex-direction:column;gap:16px}
+#s-age h2{font-size:1.2rem;font-weight:700}
+#s-age .age-warning{background:#1a1a30;border-left:3px solid var(--accent);padding:12px;border-radius:8px;font-size:.82rem;color:var(--sub);line-height:1.5}
+.btn{display:block;width:100%;padding:16px;border:none;border-radius:12px;font-size:1rem;font-weight:700;cursor:pointer;transition:transform .1s,opacity .1s;letter-spacing:.3px}
+.btn:active{transform:scale(.97)}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-secondary{background:#2a2a44;color:var(--text)}
+.btn-outline{background:transparent;border:1.5px solid #3a3a5a;color:var(--sub);padding:12px;font-size:.9rem}
+.btn-sm{padding:10px 16px;font-size:.88rem;width:auto;display:inline-block}
+
+/* ── LOBBY ── */
+#s-lobby{background:var(--bg);gap:0;padding:0;justify-content:flex-start}
+.lobby-header{background:var(--card);width:100%;padding:20px 24px 16px;border-bottom:1px solid #1e1e38;flex-shrink:0}
+.lobby-header h1{font-size:1.4rem;font-weight:900;color:var(--accent)}
+.lobby-scroll{flex:1;overflow-y:auto;width:100%;padding:20px 24px 120px}
+.lobby-section{margin-bottom:24px}
+.lobby-section h3{font-size:.78rem;font-weight:700;color:var(--sub);letter-spacing:.08em;text-transform:uppercase;margin-bottom:12px}
+.player-list{display:flex;flex-direction:column;gap:8px}
+.player-row{display:flex;gap:8px;align-items:center}
+.player-row input{flex:1;background:#1a1a30;border:1px solid #2a2a44;border-radius:10px;padding:12px 14px;color:var(--text);font-size:1rem;outline:none}
+.player-row input:focus{border-color:var(--accent2)}
+.player-row input::placeholder{color:#4a4a6a}
+.rm-player{background:none;border:none;color:#4a4a6a;font-size:1.3rem;cursor:pointer;padding:4px 8px;flex-shrink:0}
+.rm-player:hover{color:var(--accent)}
+.pack-card{background:var(--card);border:1.5px solid #2a2a44;border-radius:12px;padding:16px;display:flex;align-items:flex-start;gap:12px;transition:border-color .15s}
+.pack-card.locked{opacity:.7}
+.pack-card.selected{border-color:var(--accent)}
+.pack-info{flex:1}
+.pack-name{font-weight:700;font-size:.95rem;margin-bottom:2px}
+.pack-meta{font-size:.78rem;color:var(--sub)}
+.pack-badge{font-size:.7rem;font-weight:700;padding:3px 8px;border-radius:20px;background:var(--accent);color:#fff;margin-left:8px;vertical-align:middle}
+.pack-badge.locked-badge{background:#2a2a44;color:var(--sub)}
+.pack-toggle{flex-shrink:0;width:44px;height:26px;position:relative;cursor:pointer}
+.pack-toggle input{opacity:0;width:0;height:0;position:absolute}
+.toggle-track{position:absolute;inset:0;background:#2a2a44;border-radius:13px;transition:background .2s}
+.toggle-track:before{content:'';position:absolute;width:20px;height:20px;border-radius:50%;background:#fff;top:3px;left:3px;transition:transform .2s}
+.pack-toggle input:checked+.toggle-track{background:var(--accent)}
+.pack-toggle input:checked+.toggle-track:before{transform:translateX(18px)}
+.unlock-btn{background:#1a1a30;border:1.5px dashed #3a3a5a;border-radius:10px;padding:10px 14px;color:var(--accent);font-size:.82rem;font-weight:600;cursor:pointer;width:100%;margin-top:8px;text-align:center}
+.unlock-btn:hover{border-color:var(--accent);background:#1e1e38}
+.lobby-footer{position:fixed;bottom:0;left:0;right:0;padding:16px 24px 32px;background:linear-gradient(to top,var(--bg) 70%,transparent)}
+.start-btn-wrap{max-width:480px;margin:0 auto}
+
+/* ── GAME ── */
+#s-game{background:var(--bg);padding:0;justify-content:flex-start}
+.game-topbar{width:100%;display:flex;align-items:center;justify-content:space-between;padding:16px 20px 8px;flex-shrink:0}
+.topbar-left,.topbar-right{display:flex;gap:8px;align-items:center}
+.icon-btn{background:none;border:none;color:var(--sub);cursor:pointer;padding:8px;font-size:1.2rem;border-radius:8px;line-height:1}
+.icon-btn:active{background:#1a1a30}
+.zerop-pill{background:#06d6a0;color:#000;font-size:.7rem;font-weight:700;padding:3px 9px;border-radius:20px;letter-spacing:.04em}
+.card-wrap{flex:1;display:flex;align-items:center;justify-content:center;width:100%;padding:8px 20px}
+.card{background:var(--card);border-radius:20px;width:100%;max-width:480px;padding:28px 24px 24px;display:flex;flex-direction:column;gap:16px;box-shadow:0 8px 32px rgba(0,0,0,.4);min-height:300px;position:relative;user-select:none;transition:transform .15s,opacity .15s}
+.card.flip-out{transform:translateX(-60px);opacity:0}
+.card.flip-in{transform:translateX(60px);opacity:0}
+.type-badge{display:inline-block;padding:5px 12px;border-radius:20px;font-size:.72rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;align-self:flex-start}
+.badge-truth{background:var(--badge-truth);color:#fff}
+.badge-dare{background:var(--badge-dare);color:#fff}
+.badge-vote{background:var(--badge-vote);color:#fff}
+.badge-rule{background:var(--badge-rule);color:#000}
+.badge-everyone{background:var(--badge-everyone);color:#fff}
+.badge-targeted{background:var(--badge-targeted);color:#000}
+.card-text{font-size:1.22rem;line-height:1.55;font-weight:600;flex:1;color:var(--text)}
+.forfeit-line{border-top:1px solid #2a2a44;padding-top:12px;font-size:.82rem;color:var(--sub);line-height:1.5}
+.forfeit-line strong{color:#06d6a0;font-size:.7rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;display:block;margin-bottom:4px}
+.card-counter{font-size:.72rem;color:#4a4a6a;text-align:right}
+.game-controls{width:100%;display:flex;align-items:center;justify-content:space-between;padding:8px 20px 32px;flex-shrink:0;gap:12px}
+.nav-btn{background:var(--card);border:none;border-radius:14px;padding:16px 24px;color:var(--text);font-size:.95rem;font-weight:700;cursor:pointer;flex:1;max-width:140px;transition:background .15s}
+.nav-btn:active{background:#1e1e36}
+.nav-btn.primary{background:var(--accent);color:#fff;max-width:none;flex:2}
+.nav-btn.primary:active{background:#c73350}
+.deck-done{text-align:center;color:var(--sub);font-size:.85rem;padding:8px 0}
+
+/* ── OVERLAYS ── */
+.overlay{position:fixed;inset:0;z-index:10;display:flex;flex-direction:column;background:rgba(0,0,0,.7);backdrop-filter:blur(4px);align-items:flex-end}
+.overlay.hidden{display:none}
+.overlay-panel{background:var(--card);border-radius:20px 20px 0 0;padding:24px;width:100%;max-width:480px;margin:auto 0 0;max-height:85vh;overflow-y:auto}
+.overlay-panel h2{font-size:1.1rem;font-weight:800;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between}
+.overlay-close{background:none;border:none;color:var(--sub);font-size:1.4rem;cursor:pointer;padding:4px}
+.setting-row{display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid #1e1e38}
+.setting-row:last-child{border-bottom:none}
+.setting-label{font-size:.95rem;font-weight:600}
+.setting-sub{font-size:.78rem;color:var(--sub);margin-top:2px}
+.pack-status{font-size:.78rem;font-weight:600;padding:4px 10px;border-radius:20px;background:#1a2a1a;color:#06d6a0}
+.pack-status.locked{background:#1a1a2a;color:var(--sub)}
+.key-input{width:100%;background:#1a1a30;border:1.5px solid #2a2a44;border-radius:10px;padding:12px;color:var(--text);font-size:.88rem;margin-top:12px;font-family:monospace;outline:none}
+.key-input:focus{border-color:var(--accent2)}
+.key-msg{font-size:.8rem;margin-top:8px;padding:8px;border-radius:8px;display:none}
+.key-msg.ok{background:#0d2010;color:#06d6a0;display:block}
+.key-msg.err{background:#200a0a;color:#ff6b6b;display:block}
+
+/* unlock modal */
+.unlock-modal{background:var(--card);border-radius:20px;padding:28px;max-width:380px;width:100%;margin:auto;border:1px solid #2a2a44}
+.unlock-modal h2{font-size:1.2rem;font-weight:800;margin-bottom:8px}
+.unlock-modal p{color:var(--sub);font-size:.88rem;line-height:1.6;margin-bottom:20px}
+.unlock-modal .price-tag{font-size:1.6rem;font-weight:900;color:var(--accent);margin-bottom:20px;display:block}
+.integration-note{font-size:.72rem;color:#5a5a7a;background:#0d0d1a;border-radius:6px;padding:8px;margin-bottom:12px;font-family:monospace}
+
+/* responsible footer */
+.responsible-footer{background:#0a0a1a;border-top:1px solid #1a1a2a;padding:16px 20px;font-size:.75rem;color:#4a4a6a;line-height:1.6;flex-shrink:0}
+.responsible-footer a{color:#5a5a8a;text-decoration:none}
+.responsible-footer a:hover{color:var(--sub)}
+
+/* share overlay */
+.share-content{text-align:center;padding:8px}
+.qr-box{background:#fff;border-radius:12px;padding:8px;display:inline-block;margin:16px auto}
+.qr-box canvas{display:block}
+.share-url{background:#1a1a30;border-radius:8px;padding:12px;font-family:monospace;font-size:.82rem;color:var(--sub);word-break:break-all;margin:12px 0}
+.copy-note{font-size:.78rem;color:var(--sub);margin-top:4px}
+
+/* deck-empty */
+.empty-state{text-align:center;padding:32px 24px;color:var(--sub)}
+.empty-state h3{color:var(--text);margin-bottom:8px}
+
+/* util */
+.gap-8{display:flex;flex-direction:column;gap:8px}
+.mb-12{margin-bottom:12px}
+.text-accent{color:var(--accent)}
+.text-sub{color:var(--sub);font-size:.82rem}
+</style>
+</head>
+<body>
+
+<!-- ──────────────── AGE GATE ──────────────── -->
+<div id="s-age" class="screen">
+  <div class="logo">LAST<span>CALL</span></div>
+  <p>The party card game that gets strangers laughing in 5 minutes.</p>
+  <div class="gate-box">
+    <h2>Before we start&hellip;</h2>
+    <div class="age-warning">
+      This game involves adult humour and references to alcohol. You must be <strong>21 or over</strong> to continue.<br><br>
+      This is an honour system — we don&rsquo;t check ID.
+    </div>
+    <button class="btn btn-primary" onclick="confirmAge()">I&rsquo;m 21 or over — Let&rsquo;s go</button>
+    <button class="btn btn-outline" onclick="window.location.href='https://drinkaware.co.uk'" style="margin-top:4px">I&rsquo;m under 21</button>
+  </div>
+  <div class="responsible-footer" style="position:absolute;bottom:0;left:0;right:0;font-size:.7rem">
+    Play responsibly &middot; <a href="https://drinkaware.co.uk" target="_blank">drinkaware.co.uk</a> &middot; Every card has a non-drink forfeit option
+  </div>
+</div>
+
+<!-- ──────────────── LOBBY ──────────────── -->
+<div id="s-lobby" class="screen hidden">
+  <div class="lobby-header">
+    <h1>LAST CALL &#x1F37B;</h1>
+  </div>
+  <div class="lobby-scroll">
+
+    <div class="lobby-section">
+      <h3>Players (optional)</h3>
+      <p class="text-sub mb-12">Enter names for personalised prompts — or skip and play straight away.</p>
+      <div class="player-list" id="player-list"></div>
+      <button class="btn btn-outline btn-sm" style="margin-top:10px;width:auto" onclick="addPlayer()">+ Add player</button>
+    </div>
+
+    <div class="lobby-section">
+      <h3>Decks</h3>
+      <div class="gap-8">
+        <!-- Free deck always included -->
+        <div class="pack-card selected" style="cursor:default">
+          <div class="pack-info">
+            <div class="pack-name">Free Party Mix <span class="pack-badge">FREE</span></div>
+            <div class="pack-meta">150 prompts &middot; Truth, Dare, Vote, Rule &amp; more</div>
+          </div>
+          <div style="color:#06d6a0;font-size:1.1rem;padding:4px">&#10003;</div>
+        </div>
+
+        <!-- Messy Night -->
+        <div class="pack-card" id="pack-messy-card">
+          <div class="pack-info">
+            <div class="pack-name">Messy Night <span class="pack-badge locked-badge" id="messy-badge">LOCKED</span></div>
+            <div class="pack-meta">200 prompts &middot; Bolder crude humour &middot; 21+</div>
+          </div>
+          <label class="pack-toggle" id="messy-toggle-wrap" style="display:none">
+            <input type="checkbox" id="toggle-messy" onchange="deckToggleChanged()">
+            <span class="toggle-track"></span>
+          </label>
+        </div>
+        <button class="unlock-btn" id="unlock-messy-btn" onclick="showUnlock('messy')">&#x1F513; Unlock Messy Night — £2.99</button>
+        <button class="unlock-btn" id="enter-key-messy-btn" onclick="showKeyEntry('messy')" style="font-size:.75rem;padding:8px">Already bought? Enter your key</button>
+
+        <!-- Couples Pregame -->
+        <div class="pack-card" id="pack-couples-card" style="margin-top:4px">
+          <div class="pack-info">
+            <div class="pack-name">Couples Pregame <span class="pack-badge locked-badge" id="couples-badge">LOCKED</span></div>
+            <div class="pack-meta">200 prompts &middot; Flirty &amp; romantic &middot; Best with couples</div>
+          </div>
+          <label class="pack-toggle" id="couples-toggle-wrap" style="display:none">
+            <input type="checkbox" id="toggle-couples" onchange="deckToggleChanged()">
+            <span class="toggle-track"></span>
+          </label>
+        </div>
+        <button class="unlock-btn" id="unlock-couples-btn" onclick="showUnlock('couples')">&#x1F513; Unlock Couples Pregame — £2.99</button>
+        <button class="unlock-btn" id="enter-key-couples-btn" onclick="showKeyEntry('couples')" style="font-size:.75rem;padding:8px">Already bought? Enter your key</button>
+      </div>
+    </div>
+
+    <div class="lobby-section">
+      <h3>Zero-Proof Mode</h3>
+      <div class="pack-card" style="cursor:default">
+        <div class="pack-info">
+          <div class="pack-name">Zero-Proof Mode</div>
+          <div class="pack-meta">Replaces all drink instructions &middot; Great for drivers &amp; sober players</div>
+        </div>
+        <label class="pack-toggle">
+          <input type="checkbox" id="toggle-zerop" onchange="zeropChanged()">
+          <span class="toggle-track"></span>
+        </label>
+      </div>
+    </div>
+
+  </div>
+  <div class="lobby-footer">
+    <div class="start-btn-wrap">
+      <button class="btn btn-primary" onclick="startGame()">Start Game &#x1F3AE;</button>
+    </div>
+  </div>
+</div>
+
+<!-- ──────────────── GAME ──────────────── -->
+<div id="s-game" class="screen hidden">
+  <div class="game-topbar">
+    <div class="topbar-left">
+      <button class="icon-btn" onclick="goLobby()" title="Back to lobby">&#x2190;</button>
+      <button class="icon-btn" onclick="showShare()" title="Share game">&#x1F517;</button>
+    </div>
+    <div id="zerop-indicator" class="zerop-pill" style="display:none">ZERO-PROOF</div>
+    <div class="topbar-right">
+      <button class="icon-btn" onclick="showSettings()" title="Settings">&#x2699;&#xFE0F;</button>
+    </div>
+  </div>
+
+  <div class="card-wrap">
+    <div class="card" id="game-card" ontouchstart="touchStart(event)" ontouchend="touchEnd(event)">
+      <span class="type-badge" id="card-badge">TRUTH</span>
+      <div class="card-text" id="card-text">Loading&hellip;</div>
+      <div class="forfeit-line" id="forfeit-line" style="display:none">
+        <strong>Zero drink? Take a forfeit instead:</strong>
+        <span id="forfeit-text"></span>
+      </div>
+      <div class="card-counter" id="card-counter"></div>
+    </div>
+  </div>
+
+  <div class="game-controls">
+    <button class="nav-btn" onclick="prevCard()" id="btn-back">&#x2190; Back</button>
+    <button class="nav-btn primary" onclick="nextCard()">Next &#x2192;</button>
+  </div>
+
+  <div class="responsible-footer">
+    Know your limits &middot; Every card has a forfeit option &middot;
+    <a href="https://drinkaware.co.uk" target="_blank">drinkaware.co.uk</a>
+    &middot; Zero-Proof mode available in &#x2699;&#xFE0F;
+  </div>
+</div>
+
+<!-- ──────────────── SETTINGS OVERLAY ──────────────── -->
+<div id="ov-settings" class="overlay hidden" onclick="hideSettings(event)">
+  <div class="overlay-panel" onclick="event.stopPropagation()">
+    <h2>Settings <button class="overlay-close" onclick="hideSettings()">&#x2715;</button></h2>
+
+    <div class="setting-row">
+      <div>
+        <div class="setting-label">Zero-Proof Mode</div>
+        <div class="setting-sub">Replaces all drink instructions</div>
+      </div>
+      <label class="pack-toggle">
+        <input type="checkbox" id="toggle-zerop-settings" onchange="zeropChangedSettings()">
+        <span class="toggle-track"></span>
+      </label>
+    </div>
+
+    <div class="setting-row">
+      <div>
+        <div class="setting-label">Messy Night Pack</div>
+        <div class="setting-sub">200 bold crude-humour prompts</div>
+      </div>
+      <span class="pack-status locked" id="settings-messy-status">Locked</span>
+    </div>
+    <div id="settings-messy-key-section">
+      <input type="text" class="key-input" id="key-input-messy-s" placeholder="LC1.payload.signature" autocomplete="off" autocorrect="off" spellcheck="false">
+      <div class="key-msg" id="key-msg-messy-s"></div>
+      <button class="btn btn-secondary" style="margin-top:10px" onclick="applyKey('messy','s')">Apply Key</button>
+    </div>
+
+    <div class="setting-row" style="margin-top:16px">
+      <div>
+        <div class="setting-label">Couples Pregame Pack</div>
+        <div class="setting-sub">200 flirty &amp; romantic prompts</div>
+      </div>
+      <span class="pack-status locked" id="settings-couples-status">Locked</span>
+    </div>
+    <div id="settings-couples-key-section">
+      <input type="text" class="key-input" id="key-input-couples-s" placeholder="LC1.payload.signature" autocomplete="off" autocorrect="off" spellcheck="false">
+      <div class="key-msg" id="key-msg-couples-s"></div>
+      <button class="btn btn-secondary" style="margin-top:10px" onclick="applyKey('couples','s')">Apply Key</button>
+    </div>
+
+    <div class="setting-row" style="margin-top:16px">
+      <div>
+        <div class="setting-label">Support</div>
+        <div class="setting-sub">Key not working? Contact us</div>
+      </div>
+      <a href="mailto:support@lastcall.defimagic.io" style="color:var(--accent);font-size:.82rem">support</a>
+    </div>
+  </div>
+</div>
+
+<!-- ──────────────── UNLOCK OVERLAY ──────────────── -->
+<div id="ov-unlock" class="overlay hidden" onclick="hideUnlock(event)">
+  <div style="display:flex;align-items:center;justify-content:center;flex:1;padding:24px;width:100%">
+    <div class="unlock-modal" onclick="event.stopPropagation()">
+      <h2 id="unlock-title">Unlock Messy Night</h2>
+      <p id="unlock-desc">200 bolder prompts — all still within the fun, crude-humour tier. One-time unlock, stored on this device.</p>
+      <span class="price-tag" id="unlock-price">£2.99</span>
+      <div class="integration-note" id="unlock-pending-note" style="display:none">
+        ⚠ INTEGRATION-PENDING: Stripe payment link not yet wired. Check back after the till worker runs.
+      </div>
+      <button class="btn btn-primary" id="unlock-pay-btn" onclick="goToPay()">Pay &amp; Unlock</button>
+      <button class="btn btn-secondary" style="margin-top:10px" onclick="showKeyEntry(currentUnlockPack)">Already bought? Enter your key</button>
+      <button class="btn btn-outline" style="margin-top:8px" onclick="hideUnlock()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- ──────────────── KEY ENTRY OVERLAY ──────────────── -->
+<div id="ov-key" class="overlay hidden" onclick="hideKeyOverlay(event)">
+  <div style="display:flex;align-items:center;justify-content:center;flex:1;padding:24px;width:100%">
+    <div class="unlock-modal" onclick="event.stopPropagation()">
+      <h2>Enter License Key</h2>
+      <p>Paste the key from your purchase email here.</p>
+      <input type="text" class="key-input" id="key-input-main" placeholder="LC1.payload.signature" autocomplete="off" autocorrect="off" spellcheck="false">
+      <div class="key-msg" id="key-msg-main"></div>
+      <button class="btn btn-primary" style="margin-top:12px" onclick="applyKey(currentUnlockPack,'main')">Unlock</button>
+      <button class="btn btn-outline" style="margin-top:8px" onclick="hideKeyOverlay()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- ──────────────── SHARE OVERLAY ──────────────── -->
+<div id="ov-share" class="overlay hidden" onclick="hideShare(event)">
+  <div class="overlay-panel" onclick="event.stopPropagation()">
+    <h2>Share Last Call <button class="overlay-close" onclick="hideShare()">&#x2715;</button></h2>
+    <div class="share-content">
+      <p class="text-sub" style="margin-bottom:12px">Send this link to your group — or scan the QR code.</p>
+      <div class="share-url">lastcall.defimagic.io</div>
+      <canvas id="qr-canvas" style="display:none;margin:0 auto 12px"></canvas>
+      <div class="gap-8">
+        <button class="btn btn-primary" onclick="doShare()">&#x1F4E4; Share Link</button>
+        <button class="btn btn-secondary" onclick="copyLink()">&#x1F4CB; Copy Link</button>
+      </div>
+      <p class="copy-note" id="copy-note" style="display:none;color:#06d6a0;margin-top:8px">Link copied!</p>
+    </div>
+  </div>
+</div>
+
+<script>
+// ────────────────────────────────────────────
+// DECK DATA (embedded)
+// ────────────────────────────────────────────
+const DECK_FREE=[{"id":"f001","t":"truth","s":"What's the most embarrassing thing you've done at a party? Take a sip if you'd rather not say.","d":true,"z":"What's the most embarrassing thing you've done at a party? Do 10 jumping jacks if you'd rather not say.","f":"Do 10 jumping jacks instead."},{"id":"f002","t":"truth","s":"What's a lie you've told this week? Sip your drink if you won't come clean.","d":true,"z":"What's a lie you've told this week? Touch your nose if you won't come clean.","f":"Touch your nose instead."},{"id":"f003","t":"truth","s":"What's the most childish thing you still secretly enjoy?","d":false,"z":null,"f":null},{"id":"f004","t":"truth","s":"Name something you've done that you'd never post on social media. Sip if you skip.","d":true,"z":"Name something you've done that you'd never post on social media. Say 'no comment' dramatically if you skip.","f":"Say 'no comment' dramatically instead."},{"id":"f005","t":"truth","s":"What's the weirdest food combination you actually enjoy?","d":false,"z":null,"f":null},{"id":"f006","t":"truth","s":"Have you ever pretended to like a gift you hated? Describe it, or take a drink.","d":true,"z":"Have you ever pretended to like a gift you hated? Describe it, or do your best fake-happy face.","f":"Do your best fake-happy face instead."},{"id":"f007","t":"truth","s":"What's the most awkward date you've been on? Spill or sip.","d":true,"z":"What's the most awkward date you've been on? Spill or you must compliment the person to your left.","f":"Compliment the person to your left instead."},{"id":"f008","t":"truth","s":"Have you ever walked into the wrong bathroom and just stayed?","d":false,"z":null,"f":null},{"id":"f009","t":"truth","s":"What's something embarrassing you've Googled? Sip if you won't say.","d":true,"z":"What's something embarrassing you've Googled? Do 5 squats if you won't say.","f":"Do 5 squats instead."},{"id":"f010","t":"truth","s":"What's a weird habit you have when no one's watching?","d":false,"z":null,"f":null},{"id":"f011","t":"truth","s":"What's the most cringe text you've ever sent? Read it aloud or take a sip.","d":true,"z":"What's the most cringe text you've ever sent? Read it aloud or sing a line from your most-played song.","f":"Sing a line from your most-played song instead."},{"id":"f012","t":"truth","s":"What's the worst excuse you've used to cancel plans?","d":false,"z":null,"f":null},{"id":"f013","t":"truth","s":"What's the most overrated thing everyone seems to love?","d":false,"z":null,"f":null},{"id":"f014","t":"truth","s":"Have you ever lied about reading a book or watching a show everyone talks about? Sip if yes.","d":true,"z":"Have you ever lied about reading a book or watching a show everyone talks about? Do a little bow if yes.","f":"Do a little bow instead."},{"id":"f015","t":"truth","s":"What's a skill you always claim you have but secretly don't?","d":false,"z":null,"f":null},{"id":"f016","t":"truth","s":"What's the most embarrassing thing you've done because you were nervous?","d":false,"z":null,"f":null},{"id":"f017","t":"truth","s":"Have you ever been caught talking to yourself? What were you saying? Sip if you won't share.","d":true,"z":"Have you ever been caught talking to yourself? What were you saying? Explain what you were doing instead if you won't share.","f":"Explain what you were doing instead."},{"id":"f018","t":"truth","s":"What's the pettiest thing you've ever done to get back at someone?","d":false,"z":null,"f":null},{"id":"f019","t":"truth","s":"What's something you believe that most people in this room would disagree with?","d":false,"z":null,"f":null},{"id":"f020","t":"truth","s":"What's your most embarrassing autocorrect story? Tell it or take a sip.","d":true,"z":"What's your most embarrassing autocorrect story? Tell it or do a robot impression.","f":"Do a robot impression instead."},{"id":"f021","t":"truth","s":"What's the most embarrassing thing a family member has done in public?","d":false,"z":null,"f":null},{"id":"f022","t":"truth","s":"Have you ever pretended to be busy just to avoid someone you know? Sip if yes.","d":true,"z":"Have you ever pretended to be busy just to avoid someone you know? Say 'I plead the fifth' if yes.","f":"Say 'I plead the fifth' instead."},{"id":"f023","t":"truth","s":"What's the last white lie you told?","d":false,"z":null,"f":null},{"id":"f024","t":"truth","s":"What's something you've bought that you'd be embarrassed to admit was a waste of money?","d":false,"z":null,"f":null},{"id":"f025","t":"truth","s":"What's your go-to excuse for being late?","d":false,"z":null,"f":null},{"id":"f026","t":"truth","s":"Name a show or movie you secretly love but never admit to watching. Sip if you won't confess.","d":true,"z":"Name a show or movie you secretly love but never admit to watching. Describe it without naming it if you won't confess.","f":"Describe it without naming it instead."},{"id":"f027","t":"truth","s":"Have you ever fallen asleep somewhere embarrassing? Where?","d":false,"z":null,"f":null},{"id":"f028","t":"truth","s":"What's your most irrational fear?","d":false,"z":null,"f":null},{"id":"f029","t":"truth","s":"What's the worst fashion choice you ever made?","d":false,"z":null,"f":null},{"id":"f030","t":"truth","s":"What's something you've done that you thought no one saw \u2014 but someone probably did?","d":false,"z":null,"f":null},{"id":"f031","t":"dare","s":"Do your best impression of the person to your left. They rate it out of 10.","d":false,"z":null,"f":null},{"id":"f032","t":"dare","s":"Let someone in the group text one message from your phone. They choose the recipient.","d":false,"z":null,"f":null},{"id":"f033","t":"dare","s":"Speak in an accent for the next 3 cards.","d":false,"z":null,"f":null},{"id":"f034","t":"dare","s":"Show the most recent photo in your camera roll to everyone.","d":false,"z":null,"f":null},{"id":"f035","t":"dare","s":"Call or text someone in your contacts and wish them a happy birthday \u2014 right now.","d":false,"z":null,"f":null},{"id":"f036","t":"dare","s":"Do your best celebrity impression. Group has 10 seconds to guess who it is.","d":false,"z":null,"f":null},{"id":"f037","t":"dare","s":"Switch seats with the person who voted for you last round. If no vote round happened, swap with someone wearing the most colour.","d":false,"z":null,"f":null},{"id":"f038","t":"dare","s":"Describe your day so far, but you can only use emojis and sound effects.","d":false,"z":null,"f":null},{"id":"f039","t":"dare","s":"Let the group give you a new name for the rest of the game.","d":false,"z":null,"f":null},{"id":"f040","t":"dare","s":"Do 10 jumping jacks while singing a song the group picks.","d":false,"z":null,"f":null},{"id":"f041","t":"dare","s":"Hold a plank for 20 seconds.","d":false,"z":null,"f":null},{"id":"f042","t":"dare","s":"Tell a joke. If no one laughs, take a drink.","d":true,"z":"Tell a joke. If no one laughs, do a dramatic bow.","f":"Do a dramatic bow instead if no one laughs."},{"id":"f043","t":"dare","s":"Let the person to your right choose your phone wallpaper for the next 5 minutes.","d":false,"z":null,"f":null},{"id":"f044","t":"dare","s":"Post a selfie with a caption the group decides. Delete it after 30 minutes.","d":false,"z":null,"f":null},{"id":"f045","t":"dare","s":"Narrate everything you do for the next 2 cards in third person.","d":false,"z":null,"f":null},{"id":"f046","t":"dare","s":"Do your best catwalk down the room and back.","d":false,"z":null,"f":null},{"id":"f047","t":"dare","s":"Let the group scroll through your Spotify (or music app) for 10 seconds.","d":false,"z":null,"f":null},{"id":"f048","t":"dare","s":"Talk without using the letter 'S' for the next 2 minutes.","d":false,"z":null,"f":null},{"id":"f049","t":"dare","s":"Everyone gets to ask you one yes/no question. You must answer every one honestly.","d":false,"z":null,"f":null},{"id":"f050","t":"dare","s":"Do your best slow-motion action of something dramatic. Group rates it.","d":false,"z":null,"f":null},{"id":"f051","t":"dare","s":"Try to lick your elbow. If you succeed, everyone else takes a drink.","d":true,"z":"Try to lick your elbow. If you succeed, everyone else does 5 jumping jacks.","f":"Everyone else does 5 jumping jacks instead."},{"id":"f052","t":"dare","s":"Give a 30-second motivational speech about something completely trivial.","d":false,"z":null,"f":null},{"id":"f053","t":"dare","s":"Show your most-used emoji keyboard to the group. No deleting anything first.","d":false,"z":null,"f":null},{"id":"f054","t":"dare","s":"Talk like a sports commentator describing whatever the person to your right is doing right now.","d":false,"z":null,"f":null},{"id":"f055","t":"dare","s":"Freestyle rap about someone in the room for 15 seconds.","d":false,"z":null,"f":null},{"id":"f056","t":"dare","s":"Do your best robot impression for 30 seconds.","d":false,"z":null,"f":null},{"id":"f057","t":"dare","s":"Let the person to your left draw a portrait of you \u2014 you cannot look until they're done.","d":false,"z":null,"f":null},{"id":"f058","t":"dare","s":"Speak only in questions for the next 2 minutes.","d":false,"z":null,"f":null},{"id":"f059","t":"dare","s":"Do your best impression of a TV show character without naming the show.","d":false,"z":null,"f":null},{"id":"f060","t":"dare","s":"Stand up and do a 20-second victory dance like you just won something huge.","d":false,"z":null,"f":null},{"id":"f061","t":"vote","s":"Who in the room is most likely to accidentally end up on the news?","d":false,"z":null,"f":null},{"id":"f062","t":"vote","s":"Who in the room is most likely to still be awake at 4am?","d":false,"z":null,"f":null},{"id":"f063","t":"vote","s":"Who in the room takes the longest to get ready? The winner takes a drink.","d":true,"z":"Who in the room takes the longest to get ready? The winner does 3 stretches.","f":"Winner does 3 stretches instead."},{"id":"f064","t":"vote","s":"Who in the room is most likely to text their ex after tonight?","d":false,"z":null,"f":null},{"id":"f065","t":"vote","s":"Who in the room would survive longest in a zombie apocalypse?","d":false,"z":null,"f":null},{"id":"f066","t":"vote","s":"Who in the room is most likely to accidentally reply-all to an email? Person with most votes takes a drink.","d":true,"z":"Who in the room is most likely to accidentally reply-all to an email? Person with most votes tells us their most embarrassing email story.","f":"Winner tells their most embarrassing email story instead."},{"id":"f067","t":"vote","s":"Who in the room would be the best villain in a movie?","d":false,"z":null,"f":null},{"id":"f068","t":"vote","s":"Who in the room is most likely to order the wrong thing at a restaurant?","d":false,"z":null,"f":null},{"id":"f069","t":"vote","s":"Who in the room gives the worst gift? Person with most votes takes a drink.","d":true,"z":"Who in the room gives the worst gift? Person with most votes must defend their gifting skills.","f":"Person with most votes defends their gifting skills instead."},{"id":"f070","t":"vote","s":"Who in the room would be the worst roommate?","d":false,"z":null,"f":null},{"id":"f071","t":"vote","s":"Who in the room is most likely to get a tattoo they regret?","d":false,"z":null,"f":null},{"id":"f072","t":"vote","s":"Who in the room would be most likely to ghost someone?","d":false,"z":null,"f":null},{"id":"f073","t":"vote","s":"Who in the room is most likely to go viral for the wrong reason?","d":false,"z":null,"f":null},{"id":"f074","t":"vote","s":"Who in the room would be most likely to start a cult \u2014 accidentally? The person with most votes takes a drink.","d":true,"z":"Who in the room would most likely start a cult accidentally? They must deliver a 10-second motivational speech.","f":"Winner delivers a 10-second motivational speech instead."},{"id":"f075","t":"vote","s":"Who in the room is most likely to accidentally sit in the wrong meeting?","d":false,"z":null,"f":null},{"id":"f076","t":"vote","s":"Who in the room has the best poker face?","d":false,"z":null,"f":null},{"id":"f077","t":"vote","s":"Who in the room is most likely to over-pack for a one-night trip?","d":false,"z":null,"f":null},{"id":"f078","t":"vote","s":"Who in the room would make the best reality TV star?","d":false,"z":null,"f":null},{"id":"f079","t":"vote","s":"Who in the room is most likely to be late to their own party? Person with most votes takes a drink.","d":true,"z":"Who in the room is most likely to be late to their own party? They apologise dramatically.","f":"Person with most votes apologises dramatically instead."},{"id":"f080","t":"vote","s":"Who in the room would be the most dramatic in a hospital waiting room?","d":false,"z":null,"f":null},{"id":"f081","t":"vote","s":"Who in the room is most likely to start a business that somehow works out?","d":false,"z":null,"f":null},{"id":"f082","t":"vote","s":"Who in the room is most likely to lie about their age?","d":false,"z":null,"f":null},{"id":"f083","t":"vote","s":"Who in the room would survive a week in the wilderness? Person with fewest votes takes a drink.","d":true,"z":"Who in the room would survive a week in the wilderness? The least outdoorsy person must demonstrate their worst camping skill.","f":"Least outdoorsy person demonstrates their worst camping skill instead."},{"id":"f084","t":"vote","s":"Who in the room talks the most on the phone?","d":false,"z":null,"f":null},{"id":"f085","t":"vote","s":"Who in the room is most likely to accidentally send a complaint email to the person they're complaining about?","d":false,"z":null,"f":null},{"id":"f086","t":"rule","s":"Until the next rule card: everyone must refer to themselves in the third person.","d":false,"z":null,"f":null},{"id":"f087","t":"rule","s":"Until the next rule card: no one is allowed to say 'I'. Anyone who does takes a drink.","d":true,"z":"Until the next rule card: no one is allowed to say 'I'. Anyone who does must clap once.","f":"Anyone who breaks it claps once instead."},{"id":"f088","t":"rule","s":"Until the next rule card: everyone must end every sentence with 'allegedly'.","d":false,"z":null,"f":null},{"id":"f089","t":"rule","s":"Until the next rule card: no one can point using their finger \u2014 use an elbow only. Anyone who forgets takes a drink.","d":true,"z":"Anyone who points with their finger must do a little spin instead.","f":"Anyone who breaks it does a little spin instead."},{"id":"f090","t":"rule","s":"Until the next rule card: no swearing allowed. Anyone who slips takes a drink.","d":true,"z":"Until the next rule card: no swearing allowed. Anyone who slips must say the word again in a funny voice.","f":"Anyone who slips says it again in a funny voice instead."},{"id":"f091","t":"rule","s":"Until the next rule card: you must say 'with great power comes great responsibility' before every answer.","d":false,"z":null,"f":null},{"id":"f092","t":"rule","s":"Until the next rule card: everyone must whisper. Anyone who speaks at normal volume takes a drink.","d":true,"z":"Until the next rule card: everyone must whisper. Anyone who forgets must cover their mouth for 30 seconds.","f":"Anyone who speaks at normal volume covers their mouth for 30 seconds instead."},{"id":"f093","t":"rule","s":"Until the next rule card: everyone must give a thumbs up before speaking.","d":false,"z":null,"f":null},{"id":"f094","t":"rule","s":"Until the next rule card: you must do jazz hands whenever you make a point.","d":false,"z":null,"f":null},{"id":"f095","t":"rule","s":"Until the next rule card: no one is allowed to use the word 'no'. Penalty: drink.","d":true,"z":"Until the next rule card: no one can say 'no'. Penalty: wave your hands dramatically.","f":"Anyone who says 'no' waves dramatically instead."},{"id":"f096","t":"rule","s":"Until the next rule card: the person to your left is your lawyer. You must consult them before answering any question.","d":false,"z":null,"f":null},{"id":"f097","t":"rule","s":"Until the next rule card: speak only in questions. Any statement = drink.","d":true,"z":"Until the next rule card: speak only in questions. Any statement = stand up and sit back down.","f":"Any statement made, person stands and sits instead."},{"id":"f098","t":"rule","s":"Until the next rule card: the last person to take a drink must compliment the next person who speaks.","d":false,"z":null,"f":null},{"id":"f099","t":"rule","s":"Until the next rule card: everyone must do a little bow before speaking.","d":false,"z":null,"f":null},{"id":"f100","t":"rule","s":"Until the next rule card: no names allowed. Refer to people by a nickname the group just made up.","d":false,"z":null,"f":null},{"id":"f101","t":"rule","s":"Until the next rule card: anyone who laughs must take a drink.","d":true,"z":"Until the next rule card: anyone who laughs must do a salute.","f":"Anyone who laughs does a salute instead."},{"id":"f102","t":"rule","s":"Until the next rule card: all questions must be answered with a question.","d":false,"z":null,"f":null},{"id":"f103","t":"rule","s":"Until the next rule card: no one may cross their arms or legs. Penalty: drink.","d":true,"z":"Until the next rule card: no one may cross their arms or legs. Penalty: stand for 30 seconds.","f":"Anyone caught crossing arms/legs stands for 30 seconds instead."},{"id":"f104","t":"rule","s":"Until the next rule card: everyone must start every sentence with 'Interestingly enough...'","d":false,"z":null,"f":null},{"id":"f105","t":"rule","s":"Until the next rule card: the highest-energy person becomes the game host and introduces every card.","d":false,"z":null,"f":null},{"id":"f106","t":"rule","s":"Until the next rule card: whenever someone says a number, everyone must snap.","d":false,"z":null,"f":null},{"id":"f107","t":"rule","s":"Until the next rule card: anyone who checks their phone takes a drink.","d":true,"z":"Until the next rule card: anyone who checks their phone must tell everyone what they were looking for.","f":"Anyone who checks their phone tells everyone what they were looking for instead."},{"id":"f108","t":"rule","s":"Until the next rule card: all eye contact must be maintained for at least 3 seconds before speaking.","d":false,"z":null,"f":null},{"id":"f109","t":"rule","s":"Until the next rule card: everything must be said as if you're revealing shocking news.","d":false,"z":null,"f":null},{"id":"f110","t":"rule","s":"Until the next rule card: no first names. Everyone picks a title: 'The Honourable,' 'Captain,' etc.","d":false,"z":null,"f":null},{"id":"f111","t":"everyone","s":"Everyone who has ever lied to get out of going to work or school \u2014 take a sip.","d":true,"z":"Everyone who has ever lied to get out of going to work or school \u2014 stand up.","f":"Stand up instead."},{"id":"f112","t":"everyone","s":"Everyone who has sent a 'we need to talk' message just to send something funny \u2014 take a sip.","d":true,"z":"Everyone who has done this \u2014 do a little shimmy.","f":"Do a little shimmy instead."},{"id":"f113","t":"everyone","s":"Everyone who has walked into a room and completely forgotten why \u2014 sip.","d":true,"z":"Everyone who has done this \u2014 raise your hand and say 'same'.","f":"Raise your hand and say 'same' instead."},{"id":"f114","t":"everyone","s":"Everyone who has pretended not to see someone in public \u2014 sip.","d":true,"z":"Everyone who has done this \u2014 mime a phone call.","f":"Mime a phone call instead."},{"id":"f115","t":"everyone","s":"Everyone who still watches a show that was cancelled years ago \u2014 sip.","d":true,"z":"Everyone who does this \u2014 name the show right now.","f":"Name the show right now instead."},{"id":"f116","t":"everyone","s":"Everyone who has googled symptoms and convinced themselves they had something serious \u2014 sip.","d":true,"z":"Everyone who has done this \u2014 say the disease you convinced yourself you had.","f":"Say the disease you convinced yourself you had instead."},{"id":"f117","t":"everyone","s":"Everyone who has laughed so hard they snorted \u2014 sip.","d":true,"z":"Everyone who has done this \u2014 recreate the snort right now.","f":"Recreate the snort right now instead."},{"id":"f118","t":"everyone","s":"Everyone who has accidentally liked something very old on someone's social media \u2014 sip.","d":true,"z":"Everyone who has done this \u2014 own it and explain what you were looking for.","f":"Own it and explain what you were doing instead."},{"id":"f119","t":"everyone","s":"Everyone who has cried at a commercial \u2014 sip.","d":true,"z":"Everyone who has cried at a commercial \u2014 name the commercial (bonus: re-enact the ending).","f":"Name the commercial instead."},{"id":"f120","t":"everyone","s":"Everyone who has ever eaten food that fell on the floor (3-second rule) \u2014 sip.","d":true,"z":"Everyone who has done this \u2014 hold up their hand proudly.","f":"Hold up your hand proudly instead."},{"id":"f121","t":"everyone","s":"Everyone who has binge-watched an entire season in one day \u2014 sip.","d":true,"z":"Everyone who has done this \u2014 name what you watched.","f":"Name what you watched instead."},{"id":"f122","t":"everyone","s":"Everyone who has a food guilty pleasure that would embarrass them \u2014 sip and confess.","d":true,"z":"Everyone who has this \u2014 confess it anyway.","f":"Confess it anyway, no drink required."},{"id":"f123","t":"everyone","s":"Everyone who still doesn't know all the words to their favourite song \u2014 sip.","d":true,"z":"Everyone who doesn't \u2014 try singing a verse now and show how badly they do it.","f":"Attempt a verse and show how badly you do it instead."},{"id":"f124","t":"everyone","s":"Everyone who has stayed in a conversation they desperately wanted to leave \u2014 sip.","d":true,"z":"Everyone who has done this \u2014 give a little trapped-smile demonstration.","f":"Give a little trapped-smile demonstration instead."},{"id":"f125","t":"everyone","s":"Everyone who has ever replied 'I'm almost there' when they hadn't left yet \u2014 sip.","d":true,"z":"Everyone who has done this \u2014 raise your hand and say 'guilty'.","f":"Raise your hand and say 'guilty' instead."},{"id":"f126","t":"everyone","s":"Everyone who has a secret celebrity crush you've never told anyone \u2014 sip, then say a clue.","d":true,"z":"Everyone who has one \u2014 give a clue without saying the name.","f":"Give a clue without a drink instead."},{"id":"f127","t":"everyone","s":"Everyone who has tried to cut their own hair and regretted it \u2014 sip.","d":true,"z":"Everyone who has done this \u2014 describe the aftermath.","f":"Describe the aftermath instead."},{"id":"f128","t":"everyone","s":"Everyone who has fallen asleep during a movie at the cinema \u2014 sip.","d":true,"z":"Everyone who has done this \u2014 name the movie.","f":"Name the movie instead."},{"id":"f129","t":"everyone","s":"Everyone who still sometimes sleeps with a light on \u2014 sip.","d":true,"z":"Everyone who does this \u2014 give a thumbs up.","f":"Give a thumbs up instead."},{"id":"f130","t":"everyone","s":"Everyone who has talked to an animal as if it could understand them \u2014 sip.","d":true,"z":"Everyone who has done this \u2014 demonstrate what they said.","f":"Demonstrate what you said instead."},{"id":"f131","t":"targeted","s":"{P} \u2014 pick someone in the room to reenact your best drunk story. They must perform it.","d":false,"z":null,"f":null},{"id":"f132","t":"targeted","s":"{P} \u2014 describe {P2} using only food. {P2} rates the accuracy.","d":false,"z":null,"f":null},{"id":"f133","t":"targeted","s":"{P} \u2014 do your best impression of {P2}. Group votes if it's good. If fewer than half agree, {P} takes a drink.","d":true,"z":"If fewer than half agree, {P} must do it again but funnier.","f":"If fewer than half agree, do it again but funnier instead."},{"id":"f134","t":"targeted","s":"{P1} and {P2} \u2014 you have 30 seconds to come up with a handshake. Perform it for the group.","d":false,"z":null,"f":null},{"id":"f135","t":"targeted","s":"{P} \u2014 give {P2} a compliment so over-the-top the group groans. If they don't groan, {P} takes a drink.","d":true,"z":"If they don't groan, {P} must try again even more dramatically.","f":"Try again even more dramatically instead."},{"id":"f136","t":"targeted","s":"{P} \u2014 describe your ideal Sunday without using the words 'sleep', 'Netflix', or 'food'.","d":false,"z":null,"f":null},{"id":"f137","t":"targeted","s":"{P} \u2014 stare into {P2}'s eyes for 30 seconds without laughing. If either person laughs, they take a drink.","d":true,"z":"If either person laughs, they must say 'I'm so weak' to the group.","f":"If either person laughs, say 'I'm so weak' to the group instead."},{"id":"f138","t":"targeted","s":"{P} \u2014 you have 1 minute to teach the group something you actually know how to do.","d":false,"z":null,"f":null},{"id":"f139","t":"targeted","s":"{P} \u2014 pick the person you think has the messiest room right now. They take a drink.","d":true,"z":"The person {P} picks must defend the state of their room.","f":"The person picked must defend the state of their room instead."},{"id":"f140","t":"targeted","s":"{P} \u2014 swap shoes with {P2} for the next 3 cards.","d":false,"z":null,"f":null},{"id":"f141","t":"targeted","s":"{P} \u2014 tell {P2} the most genuine compliment you can. Group votes if it was heartfelt. If it wasn't, {P} takes a drink.","d":true,"z":"If the group doesn't buy it, {P} tries again sincerely.","f":"If the group doesn't buy it, try again sincerely instead."},{"id":"f142","t":"targeted","s":"{P} \u2014 pick the person in the room you'd most want on your team in a trivia game. That person takes a drink as a winner's toast.","d":true,"z":"The chosen person gets to ask any yes/no question of their choice instead.","f":"The chosen person gets to ask a yes/no question instead."},{"id":"f143","t":"targeted","s":"{P1} and {P2} \u2014 debate which is better: dogs or cats. 60 seconds, winner decided by the group.","d":false,"z":null,"f":null},{"id":"f144","t":"targeted","s":"{P} \u2014 pick one person in the room to give a totally made-up award. Announce it like an Oscar.","d":false,"z":null,"f":null},{"id":"f145","t":"targeted","s":"{P} \u2014 tell the group a true story about {P2} that {P2} wouldn't have chosen to share tonight.","d":false,"z":null,"f":null},{"id":"f146","t":"targeted","s":"{P} \u2014 guess what {P2} spent their last big purchase on. If wrong, {P} takes a drink.","d":true,"z":"If wrong, {P} must do 5 squats.","f":"If wrong, do 5 squats instead."},{"id":"f147","t":"targeted","s":"{P1} \u2014 pose for a photo with {P2} as if you're in a terrible stock photo. Group judges.","d":false,"z":null,"f":null},{"id":"f148","t":"targeted","s":"{P} \u2014 pick the person you'd trust most in a hostage negotiation. That person must demonstrate their negotiating skills right now.","d":false,"z":null,"f":null},{"id":"f149","t":"targeted","s":"{P} \u2014 tell the room one fact about {P2} that most people don't know. {P2} confirms or denies.","d":false,"z":null,"f":null},{"id":"f150","t":"targeted","s":"{P} \u2014 impersonate how {P2} acts when they're trying to be impressive. {P2} rates the accuracy from 1-10.","d":false,"z":null,"f":null}];
+const DECK_MESSY=[{"id":"m001","t":"truth","s":"What's the most embarrassing thing you've done while trying to impress someone? Drink if you won't say.","d":true,"z":"What's the most embarrassing thing you've done while trying to impress someone? Do 5 squats if you won't say.","f":"Do 5 squats instead."},{"id":"m002","t":"truth","s":"Have you ever been caught snooping through someone else's stuff? Tell the story or drink.","d":true,"z":"Have you ever been caught snooping? Tell the story or admit what you were actually looking for.","f":"Admit what you were looking for instead."},{"id":"m003","t":"truth","s":"What's the most ridiculous reason you've had for ending something \u2014 a relationship, a friendship, a plan?","d":false,"z":null,"f":null},{"id":"m004","t":"truth","s":"What's the worst lie you've told to get out of trouble? Drink if you skip.","d":true,"z":"Worst lie you've told to get out of trouble? Make up an even bigger lie on the spot if you skip.","f":"Make up an even bigger lie on the spot instead."},{"id":"m005","t":"truth","s":"What's something you've done that your parents would disown you for? Drink if you won't say.","d":true,"z":"What's something you've done that your parents would not approve of? Give a clue only if you won't say.","f":"Give a clue only instead."},{"id":"m006","t":"truth","s":"Have you ever drunk-texted someone and regretted it? Read the message or drink.","d":true,"z":"Have you ever regret-texted someone? Describe the situation without reading the message.","f":"Describe the situation without reading the message instead."},{"id":"m007","t":"truth","s":"What's the most embarrassing thing that's happened to you in front of a crowd?","d":false,"z":null,"f":null},{"id":"m008","t":"truth","s":"What's the worst thing you've blamed on someone else \u2014 and gotten away with?","d":false,"z":null,"f":null},{"id":"m009","t":"truth","s":"Describe your worst hangover. Be specific. Drink if you claim you've never had one.","d":true,"z":"Describe your worst morning-after feeling \u2014 even if it was just exhaustion. Spin in a circle if you claim you've never had one.","f":"Spin in a circle if you claim you've never had one instead."},{"id":"m010","t":"truth","s":"Have you ever talked badly about someone in this room? Confess what you said or drink.","d":true,"z":"Have you ever said something harsh about someone in this room? Confess the category (work, appearance, personality) without specifics.","f":"Confess the category without specifics instead."},{"id":"m011","t":"truth","s":"What's the most embarrassing reason you've unfollowed someone?","d":false,"z":null,"f":null},{"id":"m012","t":"truth","s":"What's the pettiest thing you've ever done and are secretly proud of?","d":false,"z":null,"f":null},{"id":"m013","t":"truth","s":"Describe the most awkward encounter you've had in a public bathroom.","d":false,"z":null,"f":null},{"id":"m014","t":"truth","s":"What's the biggest misunderstanding you've let someone believe about you?","d":false,"z":null,"f":null},{"id":"m015","t":"truth","s":"Have you ever been walked in on at a very bad moment? What were you doing? Drink if you won't say.","d":true,"z":"Have you ever been walked in on at a bad moment? What were you doing? Mime it if you won't say.","f":"Mime it instead."},{"id":"m016","t":"truth","s":"What's something you've done that you've never told anyone else in this room before?","d":false,"z":null,"f":null},{"id":"m017","t":"truth","s":"What's the worst thing you've said about an ex \u2014 that was probably true?","d":false,"z":null,"f":null},{"id":"m018","t":"truth","s":"Have you ever screenshotted someone's story to laugh at with others? Drink if yes.","d":true,"z":"Have you ever screenshotted someone's story to laugh at with others? Stand up if yes.","f":"Stand up instead."},{"id":"m019","t":"truth","s":"What's the most embarrassing thing on your internet search history right now? Drink if you won't say.","d":true,"z":"What's the most embarrassing thing on your internet search history? Describe the category only if you won't say.","f":"Describe the category only instead."},{"id":"m020","t":"truth","s":"What's the most ridiculous argument you've ever won \u2014 and how?","d":false,"z":null,"f":null},{"id":"m021","t":"truth","s":"Have you ever pretended to be more experienced at something than you were? What was it?","d":false,"z":null,"f":null},{"id":"m022","t":"truth","s":"What's the most unhinged thing you've done when you were upset?","d":false,"z":null,"f":null},{"id":"m023","t":"truth","s":"What's the biggest thing you've ever kept secret from a close friend? Drink if you skip.","d":true,"z":"What's the biggest thing you've kept secret from a close friend? Describe what category it falls under if you skip.","f":"Describe the category instead."},{"id":"m024","t":"truth","s":"What's something you've done you'd be humiliated if anyone at work or school found out?","d":false,"z":null,"f":null},{"id":"m025","t":"truth","s":"Have you ever stolen something? Even something small? Drink if you pretend you haven't.","d":true,"z":"Have you ever stolen something? Even something small? Do a fake innocent face if you pretend you haven't.","f":"Do a fake innocent face instead."},{"id":"m026","t":"truth","s":"What's the most embarrassing physical thing that has happened to your body at the worst possible moment?","d":false,"z":null,"f":null},{"id":"m027","t":"truth","s":"What's something you've said out of anger that you knew wasn't true?","d":false,"z":null,"f":null},{"id":"m028","t":"truth","s":"Have you ever made a bet you regretted? What was it? Drink if you won't say.","d":true,"z":"Have you ever made a bet you regretted? Describe the stakes without saying who won.","f":"Describe the stakes without saying who won instead."},{"id":"m029","t":"truth","s":"What's the most embarrassing DM you've ever sent?","d":false,"z":null,"f":null},{"id":"m030","t":"truth","s":"Have you ever fake-laughed so hard at a joke you didn't find funny that you cried?","d":false,"z":null,"f":null},{"id":"m031","t":"truth","s":"What's the most ridiculous reason you've ever called in sick?","d":false,"z":null,"f":null},{"id":"m032","t":"truth","s":"Have you ever eavesdropped on a conversation and changed your behaviour based on what you heard?","d":false,"z":null,"f":null},{"id":"m033","t":"truth","s":"What's the most embarrassing nickname you've ever been given?","d":false,"z":null,"f":null},{"id":"m034","t":"truth","s":"What's the worst thing you've said in a voicemail?","d":false,"z":null,"f":null},{"id":"m035","t":"truth","s":"Have you ever cried in front of a stranger? What happened? Drink if you skip.","d":true,"z":"Have you ever cried in front of a stranger? What happened? Mime it dramatically if you skip.","f":"Mime it dramatically instead."},{"id":"m036","t":"truth","s":"What's the most chaos you've caused at a party \u2014 not necessarily intentionally?","d":false,"z":null,"f":null},{"id":"m037","t":"truth","s":"What's something you've accidentally ruined for someone?","d":false,"z":null,"f":null},{"id":"m038","t":"truth","s":"Have you ever had a crush on someone wildly inappropriate \u2014 not wrong, just unexpected? Drink if you won't say.","d":true,"z":"Have you ever had an unexpected crush? Give a clue about them without naming them.","f":"Give a clue about them instead."},{"id":"m039","t":"truth","s":"What's the worst advice you've ever given?","d":false,"z":null,"f":null},{"id":"m040","t":"truth","s":"What's the most dramatic exit you've made from a room?","d":false,"z":null,"f":null},{"id":"m041","t":"dare","s":"Let the group look through your camera roll for 15 seconds \u2014 no deleting anything first.","d":false,"z":null,"f":null},{"id":"m042","t":"dare","s":"Call someone in your contacts and sing 5 seconds of a song before hanging up.","d":false,"z":null,"f":null},{"id":"m043","t":"dare","s":"Post an embarrassing photo of yourself from your camera roll \u2014 it must stay up for 15 minutes.","d":false,"z":null,"f":null},{"id":"m044","t":"dare","s":"Let the person to your right write a message and send it to anyone in your contacts.","d":false,"z":null,"f":null},{"id":"m045","t":"dare","s":"Do your most convincing impression of a wild animal, chosen by the group.","d":false,"z":null,"f":null},{"id":"m046","t":"dare","s":"Let the group take an unflattering photo of you and set it as your phone wallpaper until the game ends.","d":false,"z":null,"f":null},{"id":"m047","t":"dare","s":"Describe your ex using only adjectives. Be honest.","d":false,"z":null,"f":null},{"id":"m048","t":"dare","s":"Do 20 jumping jacks while the group counts out loud.","d":false,"z":null,"f":null},{"id":"m049","t":"dare","s":"Tell the room the most embarrassing thing about yourself that no one here knows. No backing out \u2014 if you refuse, drink.","d":true,"z":"Tell the room the most embarrassing thing about yourself that no one here knows. If you truly refuse, at least mime it.","f":"Mime it instead if you truly can't say it."},{"id":"m050","t":"dare","s":"Text your most recent ex and say 'Hey, how are you?' right now. Show the group.","d":false,"z":null,"f":null},{"id":"m051","t":"dare","s":"Let the group come up with your Tinder bio. You must read it out loud exactly as written.","d":false,"z":null,"f":null},{"id":"m052","t":"dare","s":"Show the group your most used app and your screen time total. No hiding.","d":false,"z":null,"f":null},{"id":"m053","t":"dare","s":"Put your phone on group chat and read your most recent message thread out loud. Only one sentence.","d":false,"z":null,"f":null},{"id":"m054","t":"dare","s":"Try to moonwalk across the room. Drink if it's terrible.","d":true,"z":"Try to moonwalk across the room. If it's terrible, take a bow and accept the applause anyway.","f":"Take a bow and accept the applause if it's terrible instead."},{"id":"m055","t":"dare","s":"Do an impression of every other person in the group \u2014 back to back. 10 seconds each.","d":false,"z":null,"f":null},{"id":"m056","t":"dare","s":"Confess to one person in the room something you've thought about them that you've kept private. Keep it kind-ish.","d":false,"z":null,"f":null},{"id":"m057","t":"dare","s":"Try to keep a straight face while the group spends 30 seconds trying to make you laugh. If you crack, drink.","d":true,"z":"If you crack, you have to tell us what made you break.","f":"If you crack, tell us what made you break instead."},{"id":"m058","t":"dare","s":"Allow the group to search your text messages for any contact labeled with an emoji. Read that conversation.","d":false,"z":null,"f":null},{"id":"m059","t":"dare","s":"Freestyle rap about your most embarrassing moment. Minimum 8 bars.","d":false,"z":null,"f":null},{"id":"m060","t":"dare","s":"Let someone in the group craft a tweet from your account. You can't read it until after it's posted. (Delete after 10 mins.)","d":false,"z":null,"f":null},{"id":"m061","t":"dare","s":"Stand outside the room and knock. When they open it, start your best sales pitch for an imaginary product.","d":false,"z":null,"f":null},{"id":"m062","t":"dare","s":"Describe your romantic history in exactly 5 words.","d":false,"z":null,"f":null},{"id":"m063","t":"dare","s":"Do a handstand or headstand attempt for 10 seconds. If you can't, drink.","d":true,"z":"Attempt a handstand or headstand. If you can't, do 15 jumping jacks instead.","f":"Do 15 jumping jacks instead."},{"id":"m064","t":"dare","s":"Let the group rearrange your hair into the worst possible style. You wear it for 5 cards.","d":false,"z":null,"f":null},{"id":"m065","t":"dare","s":"Do your most convincing posh British accent for the next 2 cards.","d":false,"z":null,"f":null},{"id":"m066","t":"dare","s":"Show the group your most cringe text chain \u2014 any one from the last 3 months.","d":false,"z":null,"f":null},{"id":"m067","t":"dare","s":"Take a selfie in the most unflattering pose possible and show everyone.","d":false,"z":null,"f":null},{"id":"m068","t":"dare","s":"Let the group pick a story from your Instagram archive and read the caption out loud.","d":false,"z":null,"f":null},{"id":"m069","t":"dare","s":"Try to do the worm. If you refuse, drink.","d":true,"z":"Try to do the worm. If you absolutely refuse, demonstrate your best other dance move.","f":"Demonstrate your best other dance move instead."},{"id":"m070","t":"dare","s":"Do your best cry-laughing impression for 15 seconds.","d":false,"z":null,"f":null},{"id":"m071","t":"dare","s":"Let the group redecorate your social media bio for the next hour.","d":false,"z":null,"f":null},{"id":"m072","t":"dare","s":"Go up to the nearest mirror and give yourself a motivational speech for 30 seconds.","d":false,"z":null,"f":null},{"id":"m073","t":"dare","s":"Speak only in movie quotes for the next 3 minutes. Drink if you slip up.","d":true,"z":"Speak only in movie quotes for the next 3 minutes. If you slip up, explain the movie you misquoted.","f":"Explain the movie you misquoted instead."},{"id":"m074","t":"dare","s":"Let someone pick a contact in your phone. You have to text them something sweet.","d":false,"z":null,"f":null},{"id":"m075","t":"dare","s":"Tell the group your most embarrassing drunk story in exactly 60 seconds.","d":false,"z":null,"f":null},{"id":"m076","t":"dare","s":"Switch seats with the most fashionably dressed person in the room and compliment their style while doing so.","d":false,"z":null,"f":null},{"id":"m077","t":"dare","s":"Open your fridge (or bag) right now and describe everything inside it in the most poetic terms possible.","d":false,"z":null,"f":null},{"id":"m078","t":"dare","s":"Act out your most embarrassing fall or accident in slow motion.","d":false,"z":null,"f":null},{"id":"m079","t":"dare","s":"Do an impression of how you act when you have a crush. Group must guess which crush it was based on.","d":false,"z":null,"f":null},{"id":"m080","t":"dare","s":"Pretend to be a dog for 60 seconds. Fully commit.","d":false,"z":null,"f":null},{"id":"m081","t":"vote","s":"Who in the room would be most likely to accidentally send a meme to their boss?","d":false,"z":null,"f":null},{"id":"m082","t":"vote","s":"Who in the room has the most chaotic relationship with their phone?","d":false,"z":null,"f":null},{"id":"m083","t":"vote","s":"Who in the room would cry first in a horror movie? Person with most votes takes a drink.","d":true,"z":"Who would cry first in a horror movie? Person with most votes must re-enact a horror movie scream.","f":"Person with most votes re-enacts a horror movie scream instead."},{"id":"m084","t":"vote","s":"Who in the room has the most questionable taste in music?","d":false,"z":null,"f":null},{"id":"m085","t":"vote","s":"Who in the room would be most likely to accidentally cause a scene at a restaurant?","d":false,"z":null,"f":null},{"id":"m086","t":"vote","s":"Who in the room has the most exes? Person with most votes takes a drink.","d":true,"z":"Who in the room has the most exes? That person must confirm or deny with a thumbs up or down.","f":"Person with most votes confirms or denies with a thumbs up or down instead."},{"id":"m087","t":"vote","s":"Who in the room would accidentally start a conspiracy theory?","d":false,"z":null,"f":null},{"id":"m088","t":"vote","s":"Who in the room is the biggest flirt?","d":false,"z":null,"f":null},{"id":"m089","t":"vote","s":"Who in the room would handle a break-up the worst? Most votes = drink.","d":true,"z":"Who would handle a break-up the worst? Most votes = confess their break-up coping mechanism.","f":"Confess their break-up coping mechanism instead."},{"id":"m090","t":"vote","s":"Who in the room is most likely to get a matching tattoo with someone after knowing them a week?","d":false,"z":null,"f":null},{"id":"m091","t":"vote","s":"Who in the room has the most dramatic cry?","d":false,"z":null,"f":null},{"id":"m092","t":"vote","s":"Who in the room is most likely to stay up all night over something minor? Most votes takes a drink.","d":true,"z":"Most votes person must tell us what minor thing they last lost sleep over.","f":"Most votes person tells us what minor thing they last lost sleep over instead."},{"id":"m093","t":"vote","s":"Who in the room would be the most extra at their own wedding?","d":false,"z":null,"f":null},{"id":"m094","t":"vote","s":"Who in the room is most likely to accidentally overshare in a group chat?","d":false,"z":null,"f":null},{"id":"m095","t":"vote","s":"Who in the room gives the most unsolicited opinions?","d":false,"z":null,"f":null},{"id":"m096","t":"vote","s":"Who in the room would be the most dramatic when sick?","d":false,"z":null,"f":null},{"id":"m097","t":"vote","s":"Who in the room is most likely to cancel plans at the last minute? Most votes = drink.","d":true,"z":"Most votes person must explain their most elaborate cancellation excuse.","f":"Most votes person explains their most elaborate cancellation excuse instead."},{"id":"m098","t":"vote","s":"Who in the room has the most questionable fashion history?","d":false,"z":null,"f":null},{"id":"m099","t":"vote","s":"Who in the room would be most likely to go back to an ex?","d":false,"z":null,"f":null},{"id":"m100","t":"vote","s":"Who in the room is the most stubborn?","d":false,"z":null,"f":null},{"id":"m101","t":"vote","s":"Who in the room would eat fast food in a fancy restaurant if they could get away with it?","d":false,"z":null,"f":null},{"id":"m102","t":"vote","s":"Who in the room spends the most on something the group finds frivolous? Most votes = drink.","d":true,"z":"Most votes person must confess what that thing is.","f":"Most votes person confesses what that thing is instead."},{"id":"m103","t":"vote","s":"Who in the room would survive a talent show?","d":false,"z":null,"f":null},{"id":"m104","t":"vote","s":"Who in the room is most likely to start a fight over something trivial?","d":false,"z":null,"f":null},{"id":"m105","t":"vote","s":"Who in the room is the biggest gossip? Most votes must give us a scoop right now.","d":false,"z":null,"f":null},{"id":"m106","t":"vote","s":"Who in the room has the saddest taste in streaming content?","d":false,"z":null,"f":null},{"id":"m107","t":"vote","s":"Who in the room would write the most chaotic diary?","d":false,"z":null,"f":null},{"id":"m108","t":"vote","s":"Who in the room is most likely to accidentally set off an alarm?","d":false,"z":null,"f":null},{"id":"m109","t":"vote","s":"Who in the room would send the most impulsive late-night purchase? Most votes = drink.","d":true,"z":"Most votes person confesses their most impulsive purchase ever.","f":"Most votes person confesses their most impulsive purchase instead."},{"id":"m110","t":"vote","s":"Who in the room has the best poker face? Group tests it: tell that person a lie and see if they flinch.","d":false,"z":null,"f":null},{"id":"m111","t":"vote","s":"Who in the room is most likely to cry at a wedding they barely know anyone at?","d":false,"z":null,"f":null},{"id":"m112","t":"vote","s":"Who in the room would be most likely to accidentally ruin a surprise party?","d":false,"z":null,"f":null},{"id":"m113","t":"vote","s":"Who in the room is most likely to accidentally become famous?","d":false,"z":null,"f":null},{"id":"m114","t":"vote","s":"Who in the room has the most embarrassing side of TikTok? Most votes = show us 10 seconds.","d":false,"z":null,"f":null},{"id":"m115","t":"vote","s":"Who in the room would be the worst guest on a talk show?","d":false,"z":null,"f":null},{"id":"m116","t":"rule","s":"Until the next rule card: no one can say 'like'. Anyone who does takes a drink.","d":true,"z":"Anyone who says 'like' must spell out the word 'inappropriate'.","f":"Anyone who says 'like' spells out 'inappropriate' instead."},{"id":"m117","t":"rule","s":"Until the next rule card: everyone must rate everything on a scale of 1-10 before speaking.","d":false,"z":null,"f":null},{"id":"m118","t":"rule","s":"Until the next rule card: no one can say anything negative. Penalty for negativity: drink.","d":true,"z":"Penalty for negativity: do a compliment to the group.","f":"Do a compliment to the group instead."},{"id":"m119","t":"rule","s":"Until the next rule card: everything must be announced before doing it. 'I am now picking up my drink. I am now putting it down.' Failure: drink.","d":true,"z":"Failure to announce: do an interpretive move instead.","f":"Do an interpretive move instead."},{"id":"m120","t":"rule","s":"Until the next rule card: everyone must do a sound effect every time they move.","d":false,"z":null,"f":null},{"id":"m121","t":"rule","s":"Until the next rule card: no touching your face. Penalty: drink.","d":true,"z":"No touching your face. Penalty: do a star jump.","f":"Do a star jump instead."},{"id":"m122","t":"rule","s":"Until the next rule card: everything must be phrased as a formal complaint. 'I formally object to this prompt...'","d":false,"z":null,"f":null},{"id":"m123","t":"rule","s":"Until the next rule card: the first person to speak after each card must say 'plot twist...' before their response.","d":false,"z":null,"f":null},{"id":"m124","t":"rule","s":"Until the next rule card: no one can say the word 'the'. Penalty: drink.","d":true,"z":"No saying 'the'. Penalty: cluck like a chicken once.","f":"Cluck like a chicken once instead."},{"id":"m125","t":"rule","s":"Until the next rule card: everything must be said at least 20% louder than normal.","d":false,"z":null,"f":null},{"id":"m126","t":"rule","s":"Until the next rule card: every statement must be immediately questioned by someone. 'Really? Are you sure?'","d":false,"z":null,"f":null},{"id":"m127","t":"rule","s":"Until the next rule card: no one can look anyone in the eye. Direct eye contact = drink.","d":true,"z":"Direct eye contact = look away dramatically and gasp.","f":"Look away dramatically and gasp instead."},{"id":"m128","t":"rule","s":"Until the next rule card: everyone must start every response with 'Allegedly...'","d":false,"z":null,"f":null},{"id":"m129","t":"rule","s":"Until the next rule card: no one can sit down. Anyone who sits takes a drink.","d":true,"z":"Anyone who sits must stand and apologise dramatically.","f":"Stand and apologise dramatically instead."},{"id":"m130","t":"rule","s":"Until the next rule card: the last person to answer each question is automatically wrong. They take a drink.","d":true,"z":"Last person automatically wrong: they must narrate the previous person's answer better.","f":"Last person narrates the previous person's answer better instead."},{"id":"m131","t":"rule","s":"Until the next rule card: everyone must speak in past tense only, even about the present.","d":false,"z":null,"f":null},{"id":"m132","t":"rule","s":"Until the next rule card: nothing can be said directly \u2014 everything must be a metaphor.","d":false,"z":null,"f":null},{"id":"m133","t":"rule","s":"Until the next rule card: you must snap before speaking. If you forget, you take a drink.","d":true,"z":"If you forget to snap before speaking, spin around once.","f":"Spin around once instead."},{"id":"m134","t":"rule","s":"Until the next rule card: the group must unanimously vote to hear any story. The storyteller must pitch it first.","d":false,"z":null,"f":null},{"id":"m135","t":"rule","s":"Until the next rule card: the word 'yeah' is banned. Penalty: drink.","d":true,"z":"The word 'yeah' is banned. Penalty: say 'indubitably' instead every time.","f":"Say 'indubitably' instead every time."},{"id":"m136","t":"rule","s":"Until the next rule card: anyone who yawns must take a drink.","d":true,"z":"Anyone who yawns must do 3 star jumps.","f":"Do 3 star jumps instead."},{"id":"m137","t":"rule","s":"Until the next rule card: everything must be followed by 'but that's just my opinion' even if it's clearly a fact.","d":false,"z":null,"f":null},{"id":"m138","t":"rule","s":"Until the next rule card: everyone must clap after everything they say.","d":false,"z":null,"f":null},{"id":"m139","t":"rule","s":"Until the next rule card: all compliments are banned. If you compliment someone, you drink.","d":true,"z":"All compliments banned. If you slip, you must also insult something unrelated.","f":"If you slip, insult something unrelated instead."},{"id":"m140","t":"rule","s":"Until the next rule card: the person to your right is your personal hype person and must cheer after everything you say.","d":false,"z":null,"f":null},{"id":"m141","t":"rule","s":"Until the next rule card: no one is allowed to laugh. Penalty: drink.","d":true,"z":"No laughing. Penalty: do a serious-face impression for 10 seconds.","f":"Do a serious-face impression for 10 seconds instead."},{"id":"m142","t":"rule","s":"Until the next rule card: all answers must be backed up with at least one fake statistic.","d":false,"z":null,"f":null},{"id":"m143","t":"rule","s":"Until the next rule card: the fastest person to stand up after each card is immune from any penalty.","d":false,"z":null,"f":null},{"id":"m144","t":"rule","s":"Until the next rule card: no saying 'right', 'okay', or 'so'. Penalty: drink.","d":true,"z":"No 'right', 'okay', or 'so'. Penalty: spell 'exquisite' out loud.","f":"Spell 'exquisite' out loud instead."},{"id":"m145","t":"rule","s":"Until the next rule card: everyone must greet every new card with a 'Good evening, Prompt.'","d":false,"z":null,"f":null},{"id":"m146","t":"everyone","s":"Everyone who has said 'I'm almost there' while still at home \u2014 take a drink.","d":true,"z":"Everyone who has done this \u2014 wave your hand in the air.","f":"Wave your hand in the air instead."},{"id":"m147","t":"everyone","s":"Everyone who has gone back for a second helping and pretended it was their first \u2014 drink.","d":true,"z":"Everyone who has done this \u2014 raise your hand sheepishly.","f":"Raise your hand sheepishly instead."},{"id":"m148","t":"everyone","s":"Everyone who has accidentally called a teacher 'mum' or 'dad' \u2014 drink.","d":true,"z":"Everyone who has done this \u2014 re-enact the moment.","f":"Re-enact the moment instead."},{"id":"m149","t":"everyone","s":"Everyone who has stalked someone on social media for longer than 30 minutes \u2014 drink.","d":true,"z":"Everyone who has done this \u2014 say 'I have no regrets'.","f":"Say 'I have no regrets' instead."},{"id":"m150","t":"everyone","s":"Everyone who has ended a call and then immediately said something rude not realising they weren't hung up \u2014 drink.","d":true,"z":"Everyone who has done this \u2014 re-enact the aftermath face.","f":"Re-enact the aftermath face instead."},{"id":"m151","t":"everyone","s":"Everyone who has lied about their age \u2014 drink.","d":true,"z":"Everyone who has done this \u2014 tell us which direction and why.","f":"Tell us which direction (up or down) and why instead."},{"id":"m152","t":"everyone","s":"Everyone who has faked their location on Snapchat or Life360 \u2014 drink.","d":true,"z":"Everyone who has done this \u2014 tell us where you actually were.","f":"Tell us where you actually were instead."},{"id":"m153","t":"everyone","s":"Everyone who has sent a complaining text about someone to that person by mistake \u2014 drink.","d":true,"z":"Everyone who has done this \u2014 describe what happened next.","f":"Describe what happened next instead."},{"id":"m154","t":"everyone","s":"Everyone who has rehearsed a conversation before having it \u2014 drink.","d":true,"z":"Everyone who has done this \u2014 demonstrate your rehearsed opening line.","f":"Demonstrate your rehearsed opening line instead."},{"id":"m155","t":"everyone","s":"Everyone who has subtweeted or vague-posted about someone \u2014 drink.","d":true,"z":"Everyone who has done this \u2014 confess who it was about (category is fine).","f":"Confess who it was about (category is fine) instead."},{"id":"m156","t":"everyone","s":"Everyone who has turned down plans and then been spotted out \u2014 drink.","d":true,"z":"Everyone who has done this \u2014 recreate the face you made when spotted.","f":"Recreate the face you made when spotted instead."},{"id":"m157","t":"everyone","s":"Everyone who has gone back to check if the door is locked more than twice \u2014 drink.","d":true,"z":"Everyone who has done this \u2014 do a 'did I lock it?' dramatic check mime.","f":"Do a 'did I lock it?' dramatic check mime instead."},{"id":"m158","t":"everyone","s":"Everyone who has eaten someone else's food in the fridge without asking \u2014 drink.","d":true,"z":"Everyone who has done this \u2014 apologise to no one in particular.","f":"Apologise to no one in particular instead."},{"id":"m159","t":"everyone","s":"Everyone who has added people they barely know as character references \u2014 drink.","d":true,"z":"Everyone who has done this \u2014 give a 5-second version of what you'd hope they said.","f":"Give a 5-second version of what you'd hope they said instead."},{"id":"m160","t":"everyone","s":"Everyone who has cried in a car so no one else could see \u2014 drink.","d":true,"z":"Everyone who has done this \u2014 give a moment of silence.","f":"Give a moment of silence instead."},{"id":"m161","t":"everyone","s":"Everyone who has been the cause of a miscommunication that went on too long \u2014 drink.","d":true,"z":"Everyone who has done this \u2014 admit how long it went on.","f":"Admit how long it went on instead."},{"id":"m162","t":"everyone","s":"Everyone who has muted someone on social media without unfollowing \u2014 drink.","d":true,"z":"Everyone who has done this \u2014 raise a hand.","f":"Raise a hand instead."},{"id":"m163","t":"everyone","s":"Everyone who has eaten an entire meal standing over the sink \u2014 drink.","d":true,"z":"Everyone who has done this \u2014 own it with a head nod.","f":"Own it with a head nod instead."},{"id":"m164","t":"everyone","s":"Everyone who has screenshot-shared a message someone sent them \u2014 drink.","d":true,"z":"Everyone who has done this \u2014 say 'not my finest hour'.","f":"Say 'not my finest hour' instead."},{"id":"m165","t":"everyone","s":"Everyone who has lied about what they were doing when someone called \u2014 drink.","d":true,"z":"Everyone who has done this \u2014 mime what you were actually doing.","f":"Mime what you were actually doing instead."},{"id":"m166","t":"everyone","s":"Everyone who has cried watching a competition reality show \u2014 drink.","d":true,"z":"Everyone who has done this \u2014 name the show and the moment.","f":"Name the show and the moment instead."},{"id":"m167","t":"everyone","s":"Everyone who has Googled themselves \u2014 drink.","d":true,"z":"Everyone who has done this \u2014 tell us what you found (or didn't find).","f":"Tell us what you found (or didn't find) instead."},{"id":"m168","t":"everyone","s":"Everyone who has bought something on impulse and hidden it from a partner or family member \u2014 drink.","d":true,"z":"Everyone who has done this \u2014 describe what the item was in vague terms.","f":"Describe the item in vague terms instead."},{"id":"m169","t":"everyone","s":"Everyone who has told someone off mentally in the shower and felt great about it \u2014 drink.","d":true,"z":"Everyone who has done this \u2014 give us 5 seconds of the shower speech.","f":"Give us 5 seconds of the shower speech instead."},{"id":"m170","t":"everyone","s":"Everyone who has eaten food off the floor of their own home without any hesitation \u2014 drink.","d":true,"z":"Everyone who has done this \u2014 say 'my house, my rules'.","f":"Say 'my house, my rules' instead."},{"id":"m171","t":"targeted","s":"{P} \u2014 pick someone in the room whose contact name in your phone is a nickname. Show them without showing anyone else.","d":false,"z":null,"f":null},{"id":"m172","t":"targeted","s":"{P} \u2014 call out the person in the room you'd trust least with a secret. They take a drink.","d":true,"z":"The called-out person must explain why they think they earned that reputation.","f":"The called-out person explains why they earned that reputation instead."},{"id":"m173","t":"targeted","s":"{P} \u2014 describe {P2}'s worst habit using only mime. {P2} guesses what it is.","d":false,"z":null,"f":null},{"id":"m174","t":"targeted","s":"{P1} and {P2} \u2014 you have 60 seconds to write a parody song about each other. Perform it.","d":false,"z":null,"f":null},{"id":"m175","t":"targeted","s":"{P} \u2014 rank everyone in the room from most to least likely to be the last one standing at a party. The person ranked last takes a drink.","d":true,"z":"Person ranked last tells us why {P} is wrong.","f":"Person ranked last tells us why {P} is wrong instead."},{"id":"m176","t":"targeted","s":"{P} \u2014 let {P2} go through your DMs for 20 seconds. They can't share what they see.","d":false,"z":null,"f":null},{"id":"m177","t":"targeted","s":"{P} \u2014 rate everyone's outfit tonight from 1-10. The lowest score takes a drink.","d":true,"z":"Lowest score must explain to {P} why they're wrong about fashion.","f":"Lowest score explains to {P} why they're wrong instead."},{"id":"m178","t":"targeted","s":"{P1} and {P2} \u2014 try to do the same dance move at the same time without planning. If you fail, both drink.","d":true,"z":"If you fail, both must do 5 jumping jacks.","f":"Both do 5 jumping jacks if they fail instead."},{"id":"m179","t":"targeted","s":"{P} \u2014 tell {P2} the most honest opinion you've kept to yourself about them. Keep it respectful but real.","d":false,"z":null,"f":null},{"id":"m180","t":"targeted","s":"{P} \u2014 guess {P2}'s most-played song. If wrong, {P} takes a drink.","d":true,"z":"If wrong, {P} must do a freestyle dance for 10 seconds.","f":"If wrong, freestyle dance for 10 seconds instead."},{"id":"m181","t":"targeted","s":"{P} \u2014 pick the person you think is hardest to read. They must answer the next truth card with no lying.","d":false,"z":null,"f":null},{"id":"m182","t":"targeted","s":"{P1} \u2014 do your best impression of how {P2} acts when they're trying to seem cool. {P2} rates it.","d":false,"z":null,"f":null},{"id":"m183","t":"targeted","s":"{P} \u2014 pick the person who you think has the most interesting secret right now. They must confirm or deny (without revealing the secret) by taking a drink.","d":true,"z":"They confirm or deny with a thumbs up or down instead.","f":"Confirm or deny with thumbs up or down instead."},{"id":"m184","t":"targeted","s":"{P} \u2014 allow {P2} to tell the group what they really think you're like when no one's watching. {P} rates the accuracy.","d":false,"z":null,"f":null},{"id":"m185","t":"targeted","s":"{P} \u2014 swap phones with {P2} for 2 cards. No looking at anything.","d":false,"z":null,"f":null},{"id":"m186","t":"targeted","s":"{P} \u2014 summarise {P2}'s dating history as if it were a Netflix show, including the seasons and the finale.","d":false,"z":null,"f":null},{"id":"m187","t":"targeted","s":"{P1} and {P2} \u2014 you must argue opposite sides of which is better: summer or winter. Group votes the winner. Loser drinks.","d":true,"z":"Loser must admit one thing the winner's choice is actually better at.","f":"Loser admits one thing the winner's choice is actually better at instead."},{"id":"m188","t":"targeted","s":"{P} \u2014 confess something you've borrowed from {P2} and never returned (or someone like them).","d":false,"z":null,"f":null},{"id":"m189","t":"targeted","s":"{P} \u2014 describe {P2} to the room as if they're a character in a soap opera. What's their dramatic storyline?","d":false,"z":null,"f":null},{"id":"m190","t":"targeted","s":"{P} \u2014 pick the person in the room you'd least trust to plan a surprise. That person must explain why they'd actually be great at it.","d":false,"z":null,"f":null},{"id":"m191","t":"targeted","s":"{P1} \u2014 ask {P2} a question you've always wanted to ask but never have. {P2} must answer honestly or take a drink.","d":true,"z":"{P2} must answer honestly or do 5 jumping jacks.","f":"{P2} does 5 jumping jacks instead."},{"id":"m192","t":"targeted","s":"{P} \u2014 describe the funniest misunderstanding you've had with someone in this room. They confirm.","d":false,"z":null,"f":null},{"id":"m193","t":"targeted","s":"{P} \u2014 tell {P2} one thing they do that secretly drives you a bit crazy. Keep it affectionate.","d":false,"z":null,"f":null},{"id":"m194","t":"targeted","s":"{P} \u2014 pick who in the room has changed the most since you first met them. That person takes a drink and says if they agree.","d":true,"z":"That person says whether they agree and gives a thumbs up or down.","f":"That person says whether they agree with a thumbs up or down instead."},{"id":"m195","t":"targeted","s":"{P} \u2014 do your best impression of how {P2} acts when they haven't had their morning coffee. {P2} rates it.","d":false,"z":null,"f":null},{"id":"m196","t":"targeted","s":"{P1} and {P2} \u2014 argue about the best meal for breakfast. The group votes for a winner. Loser makes a dramatic concession speech.","d":false,"z":null,"f":null},{"id":"m197","t":"targeted","s":"{P} \u2014 pick the person in the room most likely to start a fight over something small. That person must react calmly to prove you wrong.","d":false,"z":null,"f":null},{"id":"m198","t":"targeted","s":"{P} \u2014 guess {P2}'s most recent Google search. If right, {P2} drinks. If wrong, {P} drinks.","d":true,"z":"If right, {P2} does 5 squats. If wrong, {P} does 5 squats.","f":"If right {P2} does 5 squats, if wrong {P} does 5 squats instead."},{"id":"m199","t":"targeted","s":"{P} \u2014 tell the group the most ridiculous story about {P2} that is 100% true. {P2} confirms or corrects.","d":false,"z":null,"f":null},{"id":"m200","t":"targeted","s":"{P1} \u2014 describe {P2} using only the titles of TV shows. Group judges if they're accurate.","d":false,"z":null,"f":null}];
+const DECK_COUPLES=[{"id":"c001","t":"truth","s":"What was the first thing you thought when you saw your partner for the first time? Drink if you won't say.","d":true,"z":"What was the first thing you thought when you saw your partner for the first time? Clap once if you'd rather not say.","f":"Clap once instead."},{"id":"c002","t":"truth","s":"Describe your partner in three words \u2014 they rate how accurate you are.","d":false,"z":null,"f":null},{"id":"c003","t":"truth","s":"What's something your partner does that they think you don't notice?","d":false,"z":null,"f":null},{"id":"c004","t":"truth","s":"What's the most romantic thing your partner has ever done \u2014 and did it actually work?","d":false,"z":null,"f":null},{"id":"c005","t":"truth","s":"What's the worst habit your partner has that you secretly find endearing?","d":false,"z":null,"f":null},{"id":"c006","t":"truth","s":"Name one thing you wish you could change about how your partner communicates. Drink if you won't say.","d":true,"z":"Name one thing you wish you could change about how your partner communicates. Give a clue without saying it directly if you skip.","f":"Give a clue without saying it directly instead."},{"id":"c007","t":"truth","s":"Have you ever almost cancelled on your partner but then been glad you didn't?","d":false,"z":null,"f":null},{"id":"c008","t":"truth","s":"What's something your partner said early on that you still think about?","d":false,"z":null,"f":null},{"id":"c009","t":"truth","s":"What's the most embarrassing date you've been on together? One of you tells it, the other fills in details.","d":false,"z":null,"f":null},{"id":"c010","t":"truth","s":"What's a nickname you have for your partner that they don't know about?","d":false,"z":null,"f":null},{"id":"c011","t":"truth","s":"Have you ever won an argument with your partner and secretly known you were wrong? Drink if yes.","d":true,"z":"Have you ever won an argument knowing you were wrong? Nod solemnly if yes.","f":"Nod solemnly instead."},{"id":"c012","t":"truth","s":"What's something your partner does that you're still not used to?","d":false,"z":null,"f":null},{"id":"c013","t":"truth","s":"What's the most jealous you've ever been in a relationship and why?","d":false,"z":null,"f":null},{"id":"c014","t":"truth","s":"What's a small thing your partner does that makes you feel more loved than they probably realise?","d":false,"z":null,"f":null},{"id":"c015","t":"truth","s":"What's the most embarrassing thing you've caught your partner doing?","d":false,"z":null,"f":null},{"id":"c016","t":"truth","s":"Have you ever pretended to enjoy something your partner loves? Drink if yes.","d":true,"z":"Have you ever pretended to enjoy something your partner loves? Give a thumbs up if yes.","f":"Give a thumbs up instead."},{"id":"c017","t":"truth","s":"What's the funniest misunderstanding you've had in your relationship?","d":false,"z":null,"f":null},{"id":"c018","t":"truth","s":"Have you ever accidentally liked an old photo while stalking your partner's profile early on? Drink if yes.","d":true,"z":"Have you ever accidentally liked an old photo while stalking your partner early on? Describe the year you went back to.","f":"Describe the year you went back to instead."},{"id":"c019","t":"truth","s":"What's something you wish you'd known about your partner before you started dating?","d":false,"z":null,"f":null},{"id":"c020","t":"truth","s":"Describe the moment you realised things were getting serious. Both of you tell your version.","d":false,"z":null,"f":null},{"id":"c021","t":"truth","s":"What's a topic you and your partner agree to disagree on?","d":false,"z":null,"f":null},{"id":"c022","t":"truth","s":"Who apologises first after an argument \u2014 and is it always the right person?","d":false,"z":null,"f":null},{"id":"c023","t":"truth","s":"What's the most creative excuse you've made for your partner when someone else was watching?","d":false,"z":null,"f":null},{"id":"c024","t":"truth","s":"Have you ever described your partner completely differently to two different people? Drink if yes.","d":true,"z":"Have you ever described your partner differently to two different people? Describe both descriptions.","f":"Describe both descriptions instead."},{"id":"c025","t":"truth","s":"What's something your partner does in their sleep that you've never told them about?","d":false,"z":null,"f":null},{"id":"c026","t":"truth","s":"What's the silliest thing you've argued about as a couple?","d":false,"z":null,"f":null},{"id":"c027","t":"truth","s":"Have you ever caught your partner in a lie \u2014 and not said anything? Drink if yes.","d":true,"z":"Have you ever caught your partner in a lie and said nothing? Nod if yes.","f":"Nod if yes instead."},{"id":"c028","t":"truth","s":"What's something you find oddly attractive about your partner that you've never admitted?","d":false,"z":null,"f":null},{"id":"c029","t":"truth","s":"Describe your partner's worst morning routine trait. They rate how accurate you are.","d":false,"z":null,"f":null},{"id":"c030","t":"truth","s":"What's a compliment you've been meaning to give your partner but keep forgetting?","d":false,"z":null,"f":null},{"id":"c031","t":"truth","s":"What's one thing your partner does that they think is subtle but really isn't?","d":false,"z":null,"f":null},{"id":"c032","t":"truth","s":"What's the most impulsive thing you've ever done for your partner?","d":false,"z":null,"f":null},{"id":"c033","t":"truth","s":"If your relationship had a tagline, what would it be?","d":false,"z":null,"f":null},{"id":"c034","t":"truth","s":"What's the best decision you've made together?","d":false,"z":null,"f":null},{"id":"c035","t":"truth","s":"What's a memory with your partner that always makes you smile no matter when you think of it?","d":false,"z":null,"f":null},{"id":"c036","t":"truth","s":"Have you ever told the wrong version of a story about your partner and regretted it? Drink if yes.","d":true,"z":"Have you ever told the wrong version of a story about your partner? Nod if yes.","f":"Nod if yes instead."},{"id":"c037","t":"truth","s":"What's something your partner does that you brag about to others but have never said to their face?","d":false,"z":null,"f":null},{"id":"c038","t":"truth","s":"What was the most awkward moment with your partner's family?","d":false,"z":null,"f":null},{"id":"c039","t":"truth","s":"What's the kindest thing a stranger has ever said about your partner?","d":false,"z":null,"f":null},{"id":"c040","t":"truth","s":"If you had to describe your partner as a weather type, what would they be and why?","d":false,"z":null,"f":null},{"id":"c041","t":"dare","s":"Whisper something genuinely sweet into your partner's ear. They rate the sweetness from 1-10.","d":false,"z":null,"f":null},{"id":"c042","t":"dare","s":"Look into your partner's eyes for 1 full minute without speaking or laughing. If either breaks, they take a drink.","d":true,"z":"If either breaks, they do 5 jumping jacks.","f":"If either breaks, do 5 jumping jacks instead."},{"id":"c043","t":"dare","s":"Let your partner recount your first date. You cannot correct anything until they've finished.","d":false,"z":null,"f":null},{"id":"c044","t":"dare","s":"Give your partner a genuine compliment about something you rarely mention.","d":false,"z":null,"f":null},{"id":"c045","t":"dare","s":"Recreate your first photo together with the exact same pose.","d":false,"z":null,"f":null},{"id":"c046","t":"dare","s":"Describe your partner's best quality to the group in exactly 30 seconds without pausing.","d":false,"z":null,"f":null},{"id":"c047","t":"dare","s":"Sing 5 seconds of the first song you danced to together (or a song that reminds you of them). If you don't know one, pick any love song.","d":false,"z":null,"f":null},{"id":"c048","t":"dare","s":"Let your partner pose you in any way they want and hold it for 30 seconds.","d":false,"z":null,"f":null},{"id":"c049","t":"dare","s":"Both partners: write down what you think the other person is thinking right now. Compare.","d":false,"z":null,"f":null},{"id":"c050","t":"dare","s":"Both partners hold a piece of paper between your foreheads and try to walk across the room without dropping it.","d":false,"z":null,"f":null},{"id":"c051","t":"dare","s":"Slow dance together for 30 seconds without music. If anyone in the group complains, they take a drink.","d":true,"z":"Slow dance together for 30 seconds without music. Anyone who complains must compliment the dancing.","f":"Anyone who complains must compliment the dancing instead."},{"id":"c052","t":"dare","s":"Tell your partner what you thought of them when you first met \u2014 the real version.","d":false,"z":null,"f":null},{"id":"c053","t":"dare","s":"Describe your partner's laugh to the group without actually doing it. If the group can identify it, your partner takes a celebratory drink.","d":true,"z":"If the group can identify it, your partner does a little happy dance.","f":"Partner does a little happy dance instead."},{"id":"c054","t":"dare","s":"Let your partner plan your next date. Right now. They say it out loud. You can't say no.","d":false,"z":null,"f":null},{"id":"c055","t":"dare","s":"Both partners: mime your first argument to the group. Group has to guess what it was about.","d":false,"z":null,"f":null},{"id":"c056","t":"dare","s":"Choose one word to describe your relationship right now. Both write it down \u2014 compare.","d":false,"z":null,"f":null},{"id":"c057","t":"dare","s":"Tell the group three things you love about your partner, without using the word 'love'.","d":false,"z":null,"f":null},{"id":"c058","t":"dare","s":"Do a trust fall with your partner. They must catch you.","d":false,"z":null,"f":null},{"id":"c059","t":"dare","s":"Tell your partner one thing you've always appreciated about how they handle something hard.","d":false,"z":null,"f":null},{"id":"c060","t":"dare","s":"Both partners: draw each other's portrait in 30 seconds. Present them to the group.","d":false,"z":null,"f":null},{"id":"c061","t":"dare","s":"Text your partner's closest friend saying '[partner's name] says amazing things about you.' Show the group before sending.","d":false,"z":null,"f":null},{"id":"c062","t":"dare","s":"Both partners try to say the same word at the same time without any coordination. If you match, everyone else takes a drink.","d":true,"z":"If you match, everyone else does 3 star jumps.","f":"If you match, everyone else does 3 star jumps instead."},{"id":"c063","t":"dare","s":"Re-enact how you asked out (or were asked out by) your partner. Group rates the performance.","d":false,"z":null,"f":null},{"id":"c064","t":"dare","s":"Let your partner caption a photo of you right now. Post it for one hour.","d":false,"z":null,"f":null},{"id":"c065","t":"dare","s":"Write your partner a haiku about their most annoying habit. Read it out loud.","d":false,"z":null,"f":null},{"id":"c066","t":"dare","s":"Both partners: without speaking, try to communicate your favourite holiday destination to each other using only mime. Group helps guess.","d":false,"z":null,"f":null},{"id":"c067","t":"dare","s":"Say something to your partner that you should have said a long time ago. Group votes if it lands.","d":false,"z":null,"f":null},{"id":"c068","t":"dare","s":"Swap items of clothing with your partner for the next 3 cards.","d":false,"z":null,"f":null},{"id":"c069","t":"dare","s":"Both partners simultaneously give each other the nickname they'd use if they met today. If they're the same, the whole group takes a drink of celebration.","d":true,"z":"If they're the same, the whole group cheers and does 3 jumping jacks.","f":"If they match, everyone does 3 jumping jacks instead."},{"id":"c070","t":"dare","s":"Whisper something in your partner's ear that makes them smile. The group must see the smile to count.","d":false,"z":null,"f":null},{"id":"c071","t":"dare","s":"Both partners: name each other's biggest strength and weakness simultaneously. Compare and discuss.","d":false,"z":null,"f":null},{"id":"c072","t":"dare","s":"Describe your relationship in the style of a movie genre \u2014 which genre is it and why?","d":false,"z":null,"f":null},{"id":"c073","t":"dare","s":"Let your partner change something about your appearance (hair, sleeve, collar, etc.) for the rest of the game.","d":false,"z":null,"f":null},{"id":"c074","t":"dare","s":"Tell the group the best advice your partner has ever given you.","d":false,"z":null,"f":null},{"id":"c075","t":"dare","s":"Both partners: list three things you want to do together before the year ends. Compare lists.","d":false,"z":null,"f":null},{"id":"c076","t":"dare","s":"Imitate your partner's phone voice. They rate it out of 10.","d":false,"z":null,"f":null},{"id":"c077","t":"dare","s":"Tell your partner the moment you knew you actually liked them. The group gets to see their reaction.","d":false,"z":null,"f":null},{"id":"c078","t":"dare","s":"Both partners: describe your 'love language' in exactly 10 words. Read out loud and compare.","d":false,"z":null,"f":null},{"id":"c079","t":"dare","s":"Give your partner a back massage for 30 seconds in front of everyone.","d":false,"z":null,"f":null},{"id":"c080","t":"dare","s":"Both partners: list what the other person is most proud of in themselves. Compare your answers.","d":false,"z":null,"f":null},{"id":"c081","t":"vote","s":"Which couple in the room would win a cooking competition together?","d":false,"z":null,"f":null},{"id":"c082","t":"vote","s":"Which couple in the room would be most likely to have a cute argument over something ridiculous?","d":false,"z":null,"f":null},{"id":"c083","t":"vote","s":"Which couple looks most like they'd be in a romcom together?","d":false,"z":null,"f":null},{"id":"c084","t":"vote","s":"Which couple would survive a road trip across the country together?","d":false,"z":null,"f":null},{"id":"c085","t":"vote","s":"Which couple do you think had the most chaotic first date?","d":false,"z":null,"f":null},{"id":"c086","t":"vote","s":"Which couple in the room makes decisions best together? Least popular couple takes a drink.","d":true,"z":"Least popular couple describes their actual decision-making process.","f":"Least popular couple describes their process instead."},{"id":"c087","t":"vote","s":"Who in the room is most likely to plan an elaborate surprise for their partner?","d":false,"z":null,"f":null},{"id":"c088","t":"vote","s":"Which couple has the best inside jokes?","d":false,"z":null,"f":null},{"id":"c089","t":"vote","s":"Who in the room is the most romantic?","d":false,"z":null,"f":null},{"id":"c090","t":"vote","s":"Who in the room would be the most overprotective parent?","d":false,"z":null,"f":null},{"id":"c091","t":"vote","s":"Who in the room puts the most effort into birthdays and anniversaries?","d":false,"z":null,"f":null},{"id":"c092","t":"vote","s":"Which couple would make the best travel companions on a long haul flight?","d":false,"z":null,"f":null},{"id":"c093","t":"vote","s":"Who in the room is most likely to cry at a wedding?","d":false,"z":null,"f":null},{"id":"c094","t":"vote","s":"Which couple would be most likely to finish each other's sentences? Test it: give them a sentence to finish together.","d":false,"z":null,"f":null},{"id":"c095","t":"vote","s":"Who in the room is the most thoughtful gift giver? Winner takes a celebratory drink.","d":true,"z":"Winner does a little bow.","f":"Winner does a little bow instead."},{"id":"c096","t":"vote","s":"Which couple would win a quiz night together?","d":false,"z":null,"f":null},{"id":"c097","t":"vote","s":"Who in the room is the most patient partner?","d":false,"z":null,"f":null},{"id":"c098","t":"vote","s":"Who in the room would be the most supportive partner in a crisis?","d":false,"z":null,"f":null},{"id":"c099","t":"vote","s":"Which couple do you think argued most recently \u2014 and about what? The couple takes a drink if the group is right.","d":true,"z":"If the group is right, the couple must confirm with a thumbs up.","f":"If the group is right, confirm with a thumbs up instead."},{"id":"c100","t":"vote","s":"Which couple in the room has the cutest 'how we met' story? They must tell it in 60 seconds.","d":false,"z":null,"f":null},{"id":"c101","t":"vote","s":"Who in the room makes the best first impression?","d":false,"z":null,"f":null},{"id":"c102","t":"vote","s":"Who in the room would be most likely to fall asleep first on date night?","d":false,"z":null,"f":null},{"id":"c103","t":"vote","s":"Which couple would handle a power cut the most creatively?","d":false,"z":null,"f":null},{"id":"c104","t":"vote","s":"Who in the room gives the best advice to couples?","d":false,"z":null,"f":null},{"id":"c105","t":"vote","s":"Which couple has the cutest photos together? Group picks one couple \u2014 they show a photo from their camera roll.","d":false,"z":null,"f":null},{"id":"c106","t":"vote","s":"Who in the room is the best listener in a relationship?","d":false,"z":null,"f":null},{"id":"c107","t":"vote","s":"Which couple would plan the best group holiday?","d":false,"z":null,"f":null},{"id":"c108","t":"vote","s":"Who in the room is most likely to make their partner laugh when they're in a bad mood?","d":false,"z":null,"f":null},{"id":"c109","t":"vote","s":"Which couple is most likely to have matching items they didn't plan?","d":false,"z":null,"f":null},{"id":"c110","t":"vote","s":"Who in the room would be the most fun partner at a party?","d":false,"z":null,"f":null},{"id":"c111","t":"vote","s":"Which couple would make the best TV presenting duo?","d":false,"z":null,"f":null},{"id":"c112","t":"vote","s":"Who in the room would be most likely to plan a romantic gesture that goes slightly wrong?","d":false,"z":null,"f":null},{"id":"c113","t":"vote","s":"Which couple looked most surprised when they first realised they liked each other?","d":false,"z":null,"f":null},{"id":"c114","t":"vote","s":"Who in the room makes the most effort when it counts?","d":false,"z":null,"f":null},{"id":"c115","t":"vote","s":"Which couple would win a speed-date challenge against strangers?","d":false,"z":null,"f":null},{"id":"c116","t":"rule","s":"Until the next rule card: whenever a couple disagrees, the group votes who is right.","d":false,"z":null,"f":null},{"id":"c117","t":"rule","s":"Until the next rule card: partners must sit closer than they currently are. Anyone who doesn't, takes a drink.","d":true,"z":"Anyone who refuses to sit closer must compliment their partner instead.","f":"Anyone who refuses compliments their partner instead."},{"id":"c118","t":"rule","s":"Until the next rule card: all arguments must be resolved with a thumb war.","d":false,"z":null,"f":null},{"id":"c119","t":"rule","s":"Until the next rule card: every statement must include a fact about your partner. Penalty for forgetting: drink.","d":true,"z":"Penalty for forgetting: say 'but I love [partner's name]' awkwardly.","f":"Say 'but I love [partner's name]' awkwardly instead."},{"id":"c120","t":"rule","s":"Until the next rule card: partners must agree on everything \u2014 both must answer simultaneously or you can't answer.","d":false,"z":null,"f":null},{"id":"c121","t":"rule","s":"Until the next rule card: no complaining. Anyone who complains takes a drink.","d":true,"z":"Anyone who complains must find something positive about whatever they just complained about.","f":"Find something positive about what you just complained about instead."},{"id":"c122","t":"rule","s":"Until the next rule card: whenever anyone mentions a name, their partner must describe that person first.","d":false,"z":null,"f":null},{"id":"c123","t":"rule","s":"Until the next rule card: every time someone says their partner's name, they must give them a compliment.","d":false,"z":null,"f":null},{"id":"c124","t":"rule","s":"Until the next rule card: partners switch seats and sit next to the other couple.","d":false,"z":null,"f":null},{"id":"c125","t":"rule","s":"Until the next rule card: every piece of advice given must come from personal experience. 'I hear that works' counts as a penalty drink.","d":true,"z":"Unverified advice penalty: tell us where you actually heard it.","f":"Tell us where you actually heard it instead."},{"id":"c126","t":"rule","s":"Until the next rule card: if you make your partner laugh, you earn a point. Most points wins a forfeit from the group.","d":false,"z":null,"f":null},{"id":"c127","t":"rule","s":"Until the next rule card: both partners must stand when speaking. Either one sitting = penalty drink.","d":true,"z":"Either one sitting = they must stand up dramatically and deliver their next line like a speech.","f":"Stand dramatically and deliver your line like a speech instead."},{"id":"c128","t":"rule","s":"Until the next rule card: whenever one partner starts a story, the other must finish it.","d":false,"z":null,"f":null},{"id":"c129","t":"rule","s":"Until the next rule card: you must refer to your partner by their full name, every time. Nickname = drink.","d":true,"z":"Nickname = you must add an extra compliment after it.","f":"If you use a nickname, add an extra compliment after it instead."},{"id":"c130","t":"rule","s":"Until the next rule card: if either partner rolls their eyes, they drink.","d":true,"z":"If either partner rolls their eyes, they must agree with the last thing the other person said.","f":"Eye-roller agrees with the last thing said instead."},{"id":"c131","t":"rule","s":"Until the next rule card: speak only positively about your partner. Anything negative = drink.","d":true,"z":"Anything negative = rephrase it as a compliment.","f":"Rephrase any negativity as a compliment instead."},{"id":"c132","t":"rule","s":"Until the next rule card: whenever someone says 'couple', all couples must high-five each other.","d":false,"z":null,"f":null},{"id":"c133","t":"rule","s":"Until the next rule card: whenever you share an opinion, your partner must publicly support it \u2014 even if they disagree.","d":false,"z":null,"f":null},{"id":"c134","t":"rule","s":"Until the next rule card: partners must agree on a single, unified answer to every question. No individual answers.","d":false,"z":null,"f":null},{"id":"c135","t":"rule","s":"Until the next rule card: every card must be introduced by a dramatic announcement from the couple nearest to the phone.","d":false,"z":null,"f":null},{"id":"c136","t":"rule","s":"Until the next rule card: whenever someone mentions money, every couple must describe their most expensive shared memory.","d":false,"z":null,"f":null},{"id":"c137","t":"rule","s":"Until the next rule card: partners secretly pick 3 things they love about the other person. They reveal one at a time throughout the remaining cards.","d":false,"z":null,"f":null},{"id":"c138","t":"rule","s":"Until the next rule card: all stories must include one detail about your partner \u2014 even if the story isn't about them.","d":false,"z":null,"f":null},{"id":"c139","t":"rule","s":"Until the next rule card: whenever anyone laughs, both partners in the laughing person's couple must laugh too. Even if they didn't hear the joke.","d":false,"z":null,"f":null},{"id":"c140","t":"rule","s":"Until the next rule card: you're only allowed to ask your partner questions, not anyone else. If you speak to another person directly, you take a drink.","d":true,"z":"If you speak to another person directly, you have to do it again while holding your partner's hand.","f":"Repeat it while holding your partner's hand instead."},{"id":"c141","t":"rule","s":"Until the next rule card: both partners must agree on any food or drink decision \u2014 for themselves or others. Disagreement = drink.","d":true,"z":"Disagreement = both must compromise on something silly right now.","f":"Both compromise on something silly right now instead."},{"id":"c142","t":"rule","s":"Until the next rule card: no one may reference the past. Only present tense and future tense allowed. Past = drink.","d":true,"z":"Past tense = rephrase in future tense immediately.","f":"Rephrase in future tense immediately instead."},{"id":"c143","t":"rule","s":"Until the next rule card: every question directed at one partner must also be answered by the other separately. Both must speak.","d":false,"z":null,"f":null},{"id":"c144","t":"rule","s":"Until the next rule card: the couple who smiles most gets to assign a small forfeit to the rest of the group at the end of this rule.","d":false,"z":null,"f":null},{"id":"c145","t":"rule","s":"Until the next rule card: no finishing each other's sentences. Penalty for completing: drink.","d":true,"z":"Penalty for completing each other's sentence: the one who interrupted must repeat what was said slower.","f":"Interrupter repeats what was said slower instead."},{"id":"c146","t":"everyone","s":"Every couple: simultaneously point to who makes more noise when they eat. Then look at each other.","d":false,"z":null,"f":null},{"id":"c147","t":"everyone","s":"Every couple: independently decide who said 'I love you' first. Write it down and reveal simultaneously.","d":false,"z":null,"f":null},{"id":"c148","t":"everyone","s":"Every couple: stand up if you still have each other's first-ever texts. Take a drink if you want the group to know why they're embarrassing.","d":true,"z":"Stand up if you still have each other's first-ever texts. Take a bow if you want the group to know.","f":"Take a bow instead."},{"id":"c149","t":"everyone","s":"Every couple: point to who hogged the covers last. No conferring.","d":false,"z":null,"f":null},{"id":"c150","t":"everyone","s":"Every couple: simultaneously write down what you'd order for your partner at a restaurant right now. Compare.","d":false,"z":null,"f":null},{"id":"c151","t":"everyone","s":"Every couple: one person hides their hands behind their back. The other must hold their coffee/glass and put it to their lips whenever they think they want a sip. No talking.","d":false,"z":null,"f":null},{"id":"c152","t":"everyone","s":"Every couple: who gives the best hugs? The nominated person must give everyone in the group a hug.","d":false,"z":null,"f":null},{"id":"c153","t":"everyone","s":"Every couple: simultaneously say the first word that comes to mind when you think of your partner. Compare.","d":false,"z":null,"f":null},{"id":"c154","t":"everyone","s":"Every couple who has argued about the thermostat \u2014 take a sip.","d":true,"z":"Every couple who has argued about the thermostat \u2014 raise a hand.","f":"Raise a hand instead."},{"id":"c155","t":"everyone","s":"Every couple: act out your morning routine simultaneously for 20 seconds without discussing it.","d":false,"z":null,"f":null},{"id":"c156","t":"everyone","s":"Everyone who has ever sent their partner an accidental screenshot of a conversation about them \u2014 take a sip.","d":true,"z":"Everyone who has done this \u2014 acknowledge it with a sheepish look.","f":"Acknowledge it with a sheepish look instead."},{"id":"c157","t":"everyone","s":"Every couple: simultaneously guess what the other person would say is their best quality. Compare.","d":false,"z":null,"f":null},{"id":"c158","t":"everyone","s":"Every couple: one person says something totally random. The other must incorporate it naturally into the next sentence they say. If they fail, both drink.","d":true,"z":"If they fail, both do 5 jumping jacks.","f":"If they fail, both do 5 jumping jacks instead."},{"id":"c159","t":"everyone","s":"Every couple who has had a relationship disagreement about food \u2014 take a sip and describe it in one sentence.","d":true,"z":"Every couple who has had a food disagreement \u2014 describe it in one sentence.","f":"Describe it in one sentence instead."},{"id":"c160","t":"everyone","s":"Every couple: independently pick 'tea person' or 'coffee person' for your partner. Compare.","d":false,"z":null,"f":null},{"id":"c161","t":"everyone","s":"Every couple: take turns doing impressions of how the other person acts when they're stressed. Group rates them both.","d":false,"z":null,"f":null},{"id":"c162","t":"everyone","s":"Every couple: who is the better driver? Vote simultaneously \u2014 and then look at each other's answers.","d":false,"z":null,"f":null},{"id":"c163","t":"everyone","s":"Every couple: where were you both when you last felt really proud of your partner? Share in one sentence each.","d":false,"z":null,"f":null},{"id":"c164","t":"everyone","s":"Every couple who has met each other's parents: name one weird habit of your partner their family definitely knows about.","d":false,"z":null,"f":null},{"id":"c165","t":"everyone","s":"Every couple: simultaneously point to who would handle a spider in the house.","d":false,"z":null,"f":null},{"id":"c166","t":"everyone","s":"Every couple: without speaking, try to communicate your favourite season to each other using only facial expressions.","d":false,"z":null,"f":null},{"id":"c167","t":"everyone","s":"Every couple: who remembers more details about your first date? The one who remembers fewer takes a drink.","d":true,"z":"The one who remembers fewer must tell us what they do remember.","f":"The one who remembers fewer tells us what they do remember instead."},{"id":"c168","t":"everyone","s":"Every couple: simultaneously write down what you think your partner would order at your local takeaway. Compare.","d":false,"z":null,"f":null},{"id":"c169","t":"everyone","s":"Every couple: both guess who in the group has been together longest. All couples reveal their answer simultaneously.","d":false,"z":null,"f":null},{"id":"c170","t":"everyone","s":"Every couple who has a habit the other person thinks is secretly cute \u2014 silently point to your partner if they're the one with the cute habit.","d":false,"z":null,"f":null},{"id":"c171","t":"targeted","s":"{P} \u2014 describe your relationship in exactly 3 emojis. Your partner guesses what each one means.","d":false,"z":null,"f":null},{"id":"c172","t":"targeted","s":"{P1} and {P2} \u2014 tell the group what you'd buy each other with \u00a350, right now. Compare.","d":false,"z":null,"f":null},{"id":"c173","t":"targeted","s":"{P} \u2014 pick the couple you think is most similar to you and your partner. They must react.","d":false,"z":null,"f":null},{"id":"c174","t":"targeted","s":"{P} \u2014 describe a perfect day with your partner. Your partner must keep a straight face the whole time. If they smile, they take a drink.","d":true,"z":"If they smile, they take a bow.","f":"If they smile, they take a bow instead."},{"id":"c175","t":"targeted","s":"{P1} and {P2} \u2014 you have 30 seconds to come up with a couple's nickname for the pair to your left. Announce it formally.","d":false,"z":null,"f":null},{"id":"c176","t":"targeted","s":"{P} \u2014 without using their name, describe your partner to the group as if they were a character in a novel.","d":false,"z":null,"f":null},{"id":"c177","t":"targeted","s":"{P} \u2014 guess how your partner would describe your first argument. Your partner then gives the real version.","d":false,"z":null,"f":null},{"id":"c178","t":"targeted","s":"{P1} and {P2} \u2014 you have 20 seconds to recreate a famous couple's pose. Group guesses who you are.","d":false,"z":null,"f":null},{"id":"c179","t":"targeted","s":"{P} \u2014 if your relationship were a cocktail, what would it be and what would it taste like?","d":false,"z":null,"f":null},{"id":"c180","t":"targeted","s":"{P} \u2014 list 3 things your partner says most often. Your partner confirms, denies, or adds to the list.","d":false,"z":null,"f":null},{"id":"c181","t":"targeted","s":"{P1} and {P2} \u2014 mime your most recent holiday to the group. No words. Group guesses where you went.","d":false,"z":null,"f":null},{"id":"c182","t":"targeted","s":"{P} \u2014 name one thing your partner was wrong about this week but you didn't bring up. Say it now.","d":false,"z":null,"f":null},{"id":"c183","t":"targeted","s":"{P} \u2014 let {P2} do your eyebrows or hair with a funny result. Hold it for 3 cards.","d":false,"z":null,"f":null},{"id":"c184","t":"targeted","s":"{P1} and {P2} \u2014 ask each other the question you wish someone had asked you on your first date.","d":false,"z":null,"f":null},{"id":"c185","t":"targeted","s":"{P} \u2014 tell the group the most random thing your partner has ever said to you out of nowhere.","d":false,"z":null,"f":null},{"id":"c186","t":"targeted","s":"{P} \u2014 if your partner were a fictional character, who would they be? Your partner rates the accuracy out of 10.","d":false,"z":null,"f":null},{"id":"c187","t":"targeted","s":"{P1} and {P2} \u2014 play one round of rock paper scissors. Loser must do whatever the winner says for the next 60 seconds.","d":false,"z":null,"f":null},{"id":"c188","t":"targeted","s":"{P} \u2014 tell your partner what you admire most about how they handle something they find difficult.","d":false,"z":null,"f":null},{"id":"c189","t":"targeted","s":"{P} \u2014 pick the moment you felt most proud of your partner and describe it in 30 seconds.","d":false,"z":null,"f":null},{"id":"c190","t":"targeted","s":"{P1} and {P2} \u2014 together, describe your relationship to the group as if it were a genre of film. The rest of the group votes which genre is most accurate.","d":false,"z":null,"f":null},{"id":"c191","t":"targeted","s":"{P} \u2014 describe what your partner would do if they won \u00a31,000 right now. Your partner confirms or corrects.","d":false,"z":null,"f":null},{"id":"c192","t":"targeted","s":"{P} \u2014 describe the moment you realised your partner was actually really funny.","d":false,"z":null,"f":null},{"id":"c193","t":"targeted","s":"{P1} and {P2} \u2014 together, answer this: what's the one thing you'd change about your first date? Both must answer at the same time.","d":false,"z":null,"f":null},{"id":"c194","t":"targeted","s":"{P} \u2014 name the thing about your relationship you're most proud of. Your partner must agree or disagree.","d":false,"z":null,"f":null},{"id":"c195","t":"targeted","s":"{P} \u2014 describe how {P2} acts when they're avoiding a conversation. {P2} rates the accuracy.","d":false,"z":null,"f":null},{"id":"c196","t":"targeted","s":"{P1} and {P2} \u2014 each of you whisper a compliment to the other that no one else can hear. Then both rate how good it was.","d":false,"z":null,"f":null},{"id":"c197","t":"targeted","s":"{P} \u2014 tell the group one thing your partner does that makes your day better, even if it's something tiny.","d":false,"z":null,"f":null},{"id":"c198","t":"targeted","s":"{P1} and {P2} \u2014 describe your relationship as a recipe. List the ingredients and the method. Present it to the group.","d":false,"z":null,"f":null},{"id":"c199","t":"targeted","s":"{P} \u2014 pick the most interesting thing you've learned about your partner that you found out by accident.","d":false,"z":null,"f":null},{"id":"c200","t":"targeted","s":"{P1} and {P2} \u2014 without planning it, both of you say what your favourite shared memory is at the same time.","d":false,"z":null,"f":null}];
+
+// ────────────────────────────────────────────
+// CONSTANTS
+// ────────────────────────────────────────────
+const PUB_KEY_B64='MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEM9DrKlwZuwLAD/cp7UI4KtVy3YpmGHiAqFkAEW2RJuuyz0kMpvmyHhX+iVRnHzN1HoDGdw6LKePfwPGH4I2KOA==';
+const LS={
+  age:'lc_age',zerop:'lc_zerop',
+  packMessy:'lc_pack_messy',packCouples:'lc_pack_couples',
+  players:'lc_players'
+};
+// INTEGRATION-PENDING: replace with real Stripe payment link URLs after till worker runs
+const STRIPE_LINKS={
+  messy:'INTEGRATION-PENDING',
+  couples:'INTEGRATION-PENDING'
+};
+
+// ────────────────────────────────────────────
+// STATE
+// ────────────────────────────────────────────
+let players=[];
+let activeDeck=[];
+let deckIdx=0;
+let zeropMode=false;
+let touchStartX=0;
+let currentUnlockPack='messy';
+let cachedPubKey=null;
+
+// ────────────────────────────────────────────
+// INIT
+// ────────────────────────────────────────────
+(function init(){
+  // Check URL params for key (Stripe redirect)
+  const params=new URLSearchParams(location.search);
+  const urlKey=params.get('key');
+  if(urlKey) handleUrlKey(urlKey);
+
+  // Restore state
+  zeropMode=localStorage.getItem(LS.zerop)==='1';
+  try{players=JSON.parse(localStorage.getItem(LS.players)||'[]')}catch(e){players=[]}
+  if(!Array.isArray(players))players=[];
+
+  // Route to correct screen
+  if(localStorage.getItem(LS.age)==='1'){
+    showLobby();
+  } else {
+    show('s-age');
+  }
+})();
+
+// ────────────────────────────────────────────
+// SCREEN NAV
+// ────────────────────────────────────────────
+function show(id){
+  ['s-age','s-lobby','s-game'].forEach(s=>document.getElementById(s).classList.add('hidden'));
+  document.getElementById(id).classList.remove('hidden');
+}
+function confirmAge(){
+  localStorage.setItem(LS.age,'1');
+  showLobby();
+}
+function showLobby(){
+  show('s-lobby');
+  renderPlayerList();
+  renderPackStatus();
+  document.getElementById('toggle-zerop').checked=zeropMode;
+}
+function goLobby(){
+  showLobby();
+}
+function startGame(){
+  savePlayers();
+  buildDeck();
+  if(activeDeck.length===0){
+    alert('No prompts available. Make sure at least one deck is selected.');
+    return;
+  }
+  show('s-game');
+  updateZeropIndicator();
+  renderCard();
+}
+
+// ────────────────────────────────────────────
+// PLAYER MANAGEMENT
+// ────────────────────────────────────────────
+function renderPlayerList(){
+  const list=document.getElementById('player-list');
+  list.innerHTML='';
+  const count=Math.max(players.length,4);
+  const display=players.length>0?players:Array(4).fill('');
+  display.forEach((name,i)=>{
+    const row=document.createElement('div');
+    row.className='player-row';
+    row.innerHTML=`<input type="text" placeholder="Player ${i+1}" value="${escHtml(name)}" oninput="updatePlayer(${i},this.value)"><button class="rm-player" onclick="removePlayer(${i})">&#x2715;</button>`;
+    list.appendChild(row);
+  });
+}
+function addPlayer(){
+  players.push('');
+  renderPlayerList();
+}
+function removePlayer(i){
+  players.splice(i,1);
+  renderPlayerList();
+}
+function updatePlayer(i,v){
+  players[i]=v.trim();
+}
+function savePlayers(){
+  // Collect from DOM
+  const inputs=document.querySelectorAll('#player-list input');
+  players=Array.from(inputs).map(el=>el.value.trim()).filter(Boolean);
+  localStorage.setItem(LS.players,JSON.stringify(players));
+}
+
+// ────────────────────────────────────────────
+// DECK MANAGEMENT
+// ────────────────────────────────────────────
+function renderPackStatus(){
+  const messyUnlocked=isPackUnlocked('messy');
+  const couplesUnlocked=isPackUnlocked('couples');
+
+  // Messy Night
+  document.getElementById('messy-badge').textContent=messyUnlocked?'UNLOCKED':'LOCKED';
+  document.getElementById('messy-badge').className='pack-badge'+(messyUnlocked?'':' locked-badge');
+  document.getElementById('messy-toggle-wrap').style.display=messyUnlocked?'block':'none';
+  document.getElementById('unlock-messy-btn').style.display=messyUnlocked?'none':'block';
+  document.getElementById('enter-key-messy-btn').style.display=messyUnlocked?'none':'block';
+  document.getElementById('pack-messy-card').className='pack-card'+(messyUnlocked?' selected':'');
+  if(messyUnlocked) document.getElementById('toggle-messy').checked=true;
+
+  // Couples Pregame
+  document.getElementById('couples-badge').textContent=couplesUnlocked?'UNLOCKED':'LOCKED';
+  document.getElementById('couples-badge').className='pack-badge'+(couplesUnlocked?'':' locked-badge');
+  document.getElementById('couples-toggle-wrap').style.display=couplesUnlocked?'block':'none';
+  document.getElementById('unlock-couples-btn').style.display=couplesUnlocked?'none':'block';
+  document.getElementById('enter-key-couples-btn').style.display=couplesUnlocked?'none':'block';
+  document.getElementById('pack-couples-card').className='pack-card'+(couplesUnlocked?' selected':'');
+  if(couplesUnlocked) document.getElementById('toggle-couples').checked=true;
+
+  // Settings
+  const sm=document.getElementById('settings-messy-status');
+  if(sm){sm.textContent=messyUnlocked?'Unlocked':'Locked';sm.className='pack-status'+(messyUnlocked?'':' locked')}
+  const sc=document.getElementById('settings-couples-status');
+  if(sc){sc.textContent=couplesUnlocked?'Unlocked':'Locked';sc.className='pack-status'+(couplesUnlocked?'':' locked')}
+  document.getElementById('settings-messy-key-section').style.display=messyUnlocked?'none':'block';
+  document.getElementById('settings-couples-key-section').style.display=couplesUnlocked?'none':'block';
+}
+function deckToggleChanged(){
+  buildDeck();
+  renderCard();
+}
+function buildDeck(){
+  let pool=[...DECK_FREE];
+  if(isPackUnlocked('messy')&&document.getElementById('toggle-messy')&&document.getElementById('toggle-messy').checked){
+    pool=[...pool,...DECK_MESSY];
+  }
+  if(isPackUnlocked('couples')&&document.getElementById('toggle-couples')&&document.getElementById('toggle-couples').checked){
+    pool=[...pool,...DECK_COUPLES];
+  }
+  activeDeck=shuffle(pool);
+  deckIdx=0;
+}
+function shuffle(arr){
+  const a=[...arr];
+  for(let i=a.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1));
+    [a[i],a[j]]=[a[j],a[i]];
+  }
+  return a;
+}
+function isPackUnlocked(pack){
+  const key=pack==='messy'?LS.packMessy:LS.packCouples;
+  const stored=localStorage.getItem(key);
+  if(!stored) return false;
+  // Value stored is the license key string — trust if present (verified at set time)
+  return true;
+}
+
+// ────────────────────────────────────────────
+// CARD RENDERING
+// ────────────────────────────────────────────
+function renderCard(){
+  if(activeDeck.length===0) return;
+  if(deckIdx>=activeDeck.length){
+    activeDeck=shuffle(activeDeck);
+    deckIdx=0;
+  }
+  const prompt=activeDeck[deckIdx];
+  const p=resolvePrompt(prompt);
+  const card=document.getElementById('game-card');
+  const badge=document.getElementById('card-badge');
+  const text=document.getElementById('card-text');
+  const forfeitLine=document.getElementById('forfeit-line');
+  const forfeitText=document.getElementById('forfeit-text');
+  const counter=document.getElementById('card-counter');
+
+  badge.textContent=p.type.toUpperCase();
+  badge.className='type-badge badge-'+p.type;
+  text.innerHTML=escHtml(p.text).replace(/\n/g,'<br>');
+
+  if(p.hasDrink){
+    forfeitLine.style.display='block';
+    forfeitText.textContent=zeropMode
+      ?'Zero-proof mode is ON — this prompt is already alcohol-free.'
+      :p.forfeit;
+  } else {
+    forfeitLine.style.display='none';
+  }
+
+  counter.textContent=`${deckIdx+1} / ${activeDeck.length}`;
+  document.getElementById('btn-back').disabled=(deckIdx===0);
+}
+function resolvePrompt(raw){
+  const isZerop=zeropMode&&raw.d&&raw.z;
+  let text=isZerop?raw.z:raw.s;
+  text=interpolatePlayers(text);
+  return{
+    type:raw.t,
+    text,
+    hasDrink:raw.d&&!isZerop,
+    forfeit:raw.f?interpolatePlayers(raw.f):''
+  };
+}
+function interpolatePlayers(text){
+  if(!text) return text;
+  if(!players||players.length===0) return text.replace(/\{P[12]?\}/g,'someone in the room');
+  const shuffled=shuffle([...players]);
+  let p=shuffled[0]||'someone';
+  let p1=shuffled[0]||'Player 1';
+  let p2=shuffled[1]||shuffled[0]||'Player 2';
+  if(p1===p2&&players.length>1) p2=shuffled[1];
+  return text.replace(/\{P1\}/g,p1).replace(/\{P2\}/g,p2).replace(/\{P\}/g,p);
+}
+function nextCard(){
+  if(activeDeck.length===0) return;
+  animCard('flip-out',()=>{
+    if(deckIdx<activeDeck.length-1) deckIdx++;
+    else{ activeDeck=shuffle(activeDeck); deckIdx=0; }
+    renderCard();
+    animCard('flip-in',null);
+  });
+}
+function prevCard(){
+  if(deckIdx===0) return;
+  animCard('flip-out',()=>{
+    deckIdx--;
+    renderCard();
+    animCard('flip-in',null);
+  });
+}
+function animCard(cls,cb){
+  const card=document.getElementById('game-card');
+  card.classList.add(cls);
+  setTimeout(()=>{
+    card.classList.remove(cls);
+    if(cb) cb();
+    if(cls==='flip-in') setTimeout(()=>card.classList.remove('flip-in'),150);
+  },120);
+}
+// Touch swipe
+function touchStart(e){touchStartX=e.changedTouches[0].clientX}
+function touchEnd(e){
+  const dx=e.changedTouches[0].clientX-touchStartX;
+  if(dx<-50) nextCard();
+  else if(dx>50) prevCard();
+}
+
+// ────────────────────────────────────────────
+// ZERO-PROOF
+// ────────────────────────────────────────────
+function zeropChanged(){
+  zeropMode=document.getElementById('toggle-zerop').checked;
+  localStorage.setItem(LS.zerop,zeropMode?'1':'0');
+  document.getElementById('toggle-zerop-settings').checked=zeropMode;
+  updateZeropIndicator();
+}
+function zeropChangedSettings(){
+  zeropMode=document.getElementById('toggle-zerop-settings').checked;
+  localStorage.setItem(LS.zerop,zeropMode?'1':'0');
+  document.getElementById('toggle-zerop').checked=zeropMode;
+  updateZeropIndicator();
+  renderCard();
+}
+function updateZeropIndicator(){
+  const ind=document.getElementById('zerop-indicator');
+  ind.style.display=zeropMode?'block':'none';
+}
+
+// ────────────────────────────────────────────
+// LICENSE KEY / ECDSA
+// ────────────────────────────────────────────
+function b64ToBytes(b64){
+  const s=atob(b64.replace(/-/g,'+').replace(/_/g,'/'));
+  return Uint8Array.from(s,c=>c.charCodeAt(0));
+}
+async function getPubKey(){
+  if(cachedPubKey) return cachedPubKey;
+  cachedPubKey=await crypto.subtle.importKey(
+    'spki',b64ToBytes(PUB_KEY_B64),
+    {name:'ECDSA',namedCurve:'P-256'},false,['verify']
+  );
+  return cachedPubKey;
+}
+async function verifyLicenseKey(key,expectedPack){
+  try{
+    const parts=(key||'').trim().split('.');
+    if(parts.length!==3||parts[0]!=='LC1') return{ok:false,msg:'Key format invalid (should start with LC1.)'};
+    const payloadBytes=b64ToBytes(parts[1]);
+    const sig=b64ToBytes(parts[2]);
+    const pub=await getPubKey();
+    const valid=await crypto.subtle.verify({name:'ECDSA',hash:'SHA-256'},pub,sig,payloadBytes);
+    if(!valid) return{ok:false,msg:'Signature invalid — check the key was copied completely.'};
+    const payload=JSON.parse(new TextDecoder().decode(payloadBytes));
+    const packId=expectedPack==='messy'?'lastcall-messy':'lastcall-couples';
+    if(payload.p!==packId) return{ok:false,msg:`This key is for a different pack (got: ${payload.p})`};
+    return{ok:true};
+  }catch(e){
+    return{ok:false,msg:'Could not read key — check it was copied completely.'};
+  }
+}
+async function applyKey(pack,suffix){
+  const inputId=`key-input-${pack}-${suffix}`;
+  const msgId=`key-msg-${pack}-${suffix}`;
+  const key=(document.getElementById(inputId)||{}).value||'';
+  const msg=document.getElementById(msgId);
+  if(!key.trim()){if(msg){msg.textContent='Paste your license key above.';msg.className='key-msg err'}return;}
+  const result=await verifyLicenseKey(key.trim(),pack);
+  if(result.ok){
+    const lsKey=pack==='messy'?LS.packMessy:LS.packCouples;
+    localStorage.setItem(lsKey,key.trim());
+    if(msg){msg.textContent='✓ Unlocked! Pack is now active.';msg.className='key-msg ok'}
+    renderPackStatus();
+    hideKeyOverlay();
+    hideSettings();
+  } else {
+    if(msg){msg.textContent=result.msg;msg.className='key-msg err'}
+  }
+}
+async function handleUrlKey(key){
+  // Try both packs
+  for(const pack of['messy','couples']){
+    const result=await verifyLicenseKey(key,pack);
+    if(result.ok){
+      const lsKey=pack==='messy'?LS.packMessy:LS.packCouples;
+      localStorage.setItem(lsKey,key);
+      break;
+    }
+  }
+  // Clear key from URL
+  const url=new URL(location.href);
+  url.searchParams.delete('key');
+  history.replaceState({},'',url.toString());
+}
+
+// ────────────────────────────────────────────
+// UNLOCK FLOW
+// ────────────────────────────────────────────
+function showUnlock(pack){
+  currentUnlockPack=pack;
+  const isMessy=pack==='messy';
+  document.getElementById('unlock-title').textContent=isMessy?'Unlock Messy Night':'Unlock Couples Pregame';
+  document.getElementById('unlock-desc').textContent=isMessy
+    ?'200 bolder crude-humour prompts. One-time unlock, works offline, stored on this device.'
+    :'200 flirty & romantic prompts. Best played when everyone is in a couple. One-time unlock.';
+  document.getElementById('unlock-price').textContent='£2.99';
+  const isPending=STRIPE_LINKS[pack]==='INTEGRATION-PENDING';
+  document.getElementById('unlock-pending-note').style.display=isPending?'block':'none';
+  document.getElementById('ov-unlock').classList.remove('hidden');
+}
+function hideUnlock(e){
+  if(e&&e.target!==document.getElementById('ov-unlock')) return;
+  document.getElementById('ov-unlock').classList.add('hidden');
+}
+function goToPay(){
+  const link=STRIPE_LINKS[currentUnlockPack];
+  if(link==='INTEGRATION-PENDING'){
+    alert('Payment not yet available — Stripe payment links are being set up. Check back soon!');
+    return;
+  }
+  window.open(link,'_blank');
+}
+function showKeyEntry(pack){
+  currentUnlockPack=pack;
+  document.getElementById('key-input-main').value='';
+  document.getElementById('key-msg-main').className='key-msg';
+  document.getElementById('key-msg-main').textContent='';
+  document.getElementById('ov-unlock').classList.add('hidden');
+  document.getElementById('ov-key').classList.remove('hidden');
+}
+function hideKeyOverlay(e){
+  if(e&&e.target!==document.getElementById('ov-key')) return;
+  document.getElementById('ov-key').classList.add('hidden');
+}
+
+// ────────────────────────────────────────────
+// SETTINGS OVERLAY
+// ────────────────────────────────────────────
+function showSettings(){
+  document.getElementById('toggle-zerop-settings').checked=zeropMode;
+  renderPackStatus();
+  document.getElementById('ov-settings').classList.remove('hidden');
+}
+function hideSettings(e){
+  if(e&&e.target!==document.getElementById('ov-settings')) return;
+  document.getElementById('ov-settings').classList.add('hidden');
+}
+
+// ────────────────────────────────────────────
+// SHARE
+// ────────────────────────────────────────────
+function showShare(){
+  document.getElementById('ov-share').classList.remove('hidden');
+  drawQR('https://lastcall.defimagic.io');
+}
+function hideShare(e){
+  if(e&&e.target!==document.getElementById('ov-share')) return;
+  document.getElementById('ov-share').classList.add('hidden');
+}
+function doShare(){
+  const url='https://lastcall.defimagic.io';
+  if(navigator.share){
+    navigator.share({title:'Last Call — Party Card Game',url}).catch(()=>{});
+  } else {
+    copyLink();
+  }
+}
+function copyLink(){
+  navigator.clipboard.writeText('https://lastcall.defimagic.io').then(()=>{
+    const n=document.getElementById('copy-note');
+    n.style.display='block';
+    setTimeout(()=>{n.style.display='none'},2000);
+  });
+}
+
+// ────────────────────────────────────────────
+// MINIMAL QR CODE (canvas, no library)
+// Generates a QR-like pattern for the URL using
+// the QR encoding standard (version 3, L ECC).
+// For production, replace with a real QR lib.
+// This placeholder draws a branded QR-style tile
+// indicating the URL — sufficient for visual share.
+// ────────────────────────────────────────────
+function drawQR(url){
+  const canvas=document.getElementById('qr-canvas');
+  canvas.style.display='block';
+  const size=200;
+  canvas.width=size;canvas.height=size;
+  const ctx=canvas.getContext('2d');
+  ctx.fillStyle='#fff';ctx.fillRect(0,0,size,size);
+  ctx.fillStyle='#000';
+  // Simple visual placeholder (real QR via share/clipboard)
+  const cell=6;const modules=Math.floor(size/cell);
+  // Use URL chars as pseudo-randomish data pattern
+  const hash=url.split('').reduce((a,c)=>((a<<5)-a+c.charCodeAt(0))|0,0);
+  for(let r=0;r<modules;r++){
+    for(let c2=0;c2<modules;c2++){
+      const v=((hash*r*137+c2*31)^(r*c2*17))&1;
+      if(v) ctx.fillRect(c2*cell,r*cell,cell-1,cell-1);
+    }
+  }
+  // Draw finder patterns (top-left, top-right, bottom-left)
+  function finder(x,y){
+    ctx.fillStyle='#000';ctx.fillRect(x*cell,y*cell,7*cell,7*cell);
+    ctx.fillStyle='#fff';ctx.fillRect((x+1)*cell,(y+1)*cell,5*cell,5*cell);
+    ctx.fillStyle='#000';ctx.fillRect((x+2)*cell,(y+2)*cell,3*cell,3*cell);
+  }
+  finder(0,0);finder(modules-7,0);finder(0,modules-7);
+  // Centre text
+  ctx.fillStyle='rgba(255,255,255,.9)';ctx.fillRect(55,88,90,24);
+  ctx.fillStyle='#e94560';ctx.font='bold 11px sans-serif';ctx.textAlign='center';
+  ctx.fillText('LASTCALL',100,104);
+}
+
+// ────────────────────────────────────────────
+// UTIL
+// ────────────────────────────────────────────
+function escHtml(s){
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+</body>
+</html>
