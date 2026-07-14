@@ -201,7 +201,7 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sa
             <span class="toggle-track"></span>
           </label>
         </div>
-        <button class="unlock-btn" id="unlock-messy-btn" onclick="showUnlock('messy')">&#x1F513; Unlock Messy Night — £2.99</button>
+        <button class="unlock-btn" id="unlock-messy-btn" onclick="showUnlock('messy')">&#x1F513; Unlock Messy Night — $2.99</button>
 
         <!-- Couples Pregame -->
         <div class="pack-card" id="pack-couples-card" style="margin-top:4px">
@@ -214,10 +214,10 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sa
             <span class="toggle-track"></span>
           </label>
         </div>
-        <button class="unlock-btn" id="unlock-couples-btn" onclick="showUnlock('couples')">&#x1F513; Unlock Couples Pregame — £2.99</button>
+        <button class="unlock-btn" id="unlock-couples-btn" onclick="showUnlock('couples')">&#x1F513; Unlock Couples Pregame — $2.99</button>
 
         <!-- Bundle -->
-        <button class="unlock-btn" id="unlock-all-btn" onclick="showUnlock('all')" style="margin-top:12px;background:#1a1a38;border-color:#5a4090;color:#c0a0ff">&#x1F389; Get Both Packs — £4.99</button>
+        <button class="unlock-btn" id="unlock-all-btn" onclick="showUnlock('all')" style="margin-top:12px;background:#1a1a38;border-color:#5a4090;color:#c0a0ff">&#x1F389; Get Both Packs — $4.99</button>
       </div>
     </div>
 
@@ -327,7 +327,7 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sa
     <div class="unlock-modal" onclick="event.stopPropagation()">
       <h2 id="unlock-title">Unlock Messy Night</h2>
       <p id="unlock-desc">200 bolder prompts — all still within the fun, crude-humour tier. One-time unlock, stored on this device.</p>
-      <span class="price-tag" id="unlock-price">£2.99</span>
+      <span class="price-tag" id="unlock-price">$2.99</span>
       <button class="btn btn-primary" id="unlock-pay-btn" onclick="goToPay()">Pay &amp; Unlock</button>
       <button class="btn btn-outline" style="margin-top:8px" onclick="hideUnlock()">Cancel</button>
     </div>
@@ -671,7 +671,7 @@ function showUnlock(pack){
     :isMessy
     ?'200 bolder crude-humour prompts. One-time unlock, works offline, stored on this device.'
     :'200 flirty & romantic prompts. Best played when everyone is in a couple. One-time unlock.';
-  document.getElementById('unlock-price').textContent=isAll?'£4.99':'£2.99';
+  document.getElementById('unlock-price').textContent=isAll?'$4.99':'$2.99';
   document.getElementById('ov-unlock').classList.remove('hidden');
 }
 function hideUnlock(e){
