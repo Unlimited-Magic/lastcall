@@ -384,6 +384,42 @@ let touchStartX=0;
 let currentUnlockPack='messy';
 
 // ────────────────────────────────────────────
+// AMBASSADOR ATTRIBUTION (RAIL×ESTATE, additive)
+// ?amb=CODE -> localStorage first-touch (never overwritten) + a track beacon to
+// the shared till. Device id is generated once and persisted so the purchase-time
+// join (via client_reference_id on each Stripe Payment Link) can find it again.
+// ────────────────────────────────────────────
+function ambDeviceId(){
+  const KEY='lastcall.device_id';
+  let id=localStorage.getItem(KEY);
+  if(!id){
+    id=(window.crypto&&crypto.randomUUID)?crypto.randomUUID():('d-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,10));
+    try{localStorage.setItem(KEY,id);}catch(e){}
+  }
+  return id;
+}
+function ambCapture(){
+  try{
+    const params=new URLSearchParams(window.location.search);
+    const code=params.get('amb');
+    if(code){
+      const u=new URL(window.location.href);
+      u.searchParams.delete('amb');
+      history.replaceState({},'',u.toString());
+      if(!localStorage.getItem('lastcall.amb')) localStorage.setItem('lastcall.amb',code);
+    }
+    const stored=localStorage.getItem('lastcall.amb');
+    if(stored){
+      fetch(TILL_BASE+'/amb/track',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({device_id:ambDeviceId(),amb_code:stored})
+      }).catch(()=>{});
+    }
+  }catch(e){}
+}
+
+// ────────────────────────────────────────────
 // INIT
 // ────────────────────────────────────────────
 (function init(){
@@ -391,6 +427,8 @@ let currentUnlockPack='messy';
   zeropMode=localStorage.getItem(LS.zerop)==='1';
   try{players=JSON.parse(localStorage.getItem(LS.players)||'[]')}catch(e){players=[]}
   if(!Array.isArray(players))players=[];
+
+  ambCapture();
 
   // Route to correct screen
   if(localStorage.getItem(LS.age)==='1'){
@@ -679,7 +717,7 @@ function hideUnlock(e){
   document.getElementById('ov-unlock').classList.add('hidden');
 }
 function goToPay(){
-  window.location.href=STRIPE_LINKS[currentUnlockPack];
+  window.location.href=STRIPE_LINKS[currentUnlockPack]+'?client_reference_id='+encodeURIComponent(ambDeviceId());
 }
 
 // ────────────────────────────────────────────
